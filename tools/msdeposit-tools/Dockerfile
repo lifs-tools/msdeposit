@@ -57,7 +57,8 @@ COPY pyproject.toml /opt/msdeposit/pyproject.toml
 COPY tests /opt/msdeposit/tests
 USER msdeposit
 WORKDIR /opt/msdeposit
-CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "-m", "external", "tests"]
+# offline by default; with network (docker run without --network none) add: -m external
+CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "-m", "external and not network", "tests"]
 
 # --- default target ---------------------------------------------------------------------------------------------
 FROM base AS runtime

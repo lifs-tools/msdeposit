@@ -173,6 +173,7 @@ def test_versions_option():
 
 
 @pytest.mark.external
+@pytest.mark.network   # the mzTab 2.0 semantic pass looks up CV terms on OLS
 @pytest.mark.skipif(not (tools_dir() and (tools_dir() / validate_mztab.VALIDATOR_21).exists()),
                     reason="MSDEPOSIT_TOOLS_DIR with the jmzTab-m validators not set")
 @pytest.mark.parametrize("variant", ["example", "sd_unannotated", "msi_levels"])
@@ -206,7 +207,5 @@ def test_external_validators_accept_both_versions(validated, tmp_path, variant):
         print(version, res["tool"], res["errors"], res["warnings"], res["messages"])
         assert res["available"]
         assert res["errors"] == 0, res["messages"]
-        # offline (container without network) the 2.0 semantic CV lookup is reported as one warning
-        other = [m for m in res["messages"] if m["level"] == "warning" and m["rule"] != "semantic_incomplete"]
-        assert not other, res["messages"]
+        assert res["warnings"] == 0, res["messages"]
         assert os.fspath(tmp_path) not in json.dumps(res)

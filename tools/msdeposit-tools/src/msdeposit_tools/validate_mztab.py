@@ -77,16 +77,17 @@ def tool_version(text: str) -> str:
 
 def semantic_messages(text: str, path: Path) -> list[dict]:
     """Messages of the semantic pass; [] when it found nothing or was skipped (structural errors at level Error,
-    which the structural pass already reported). Rules that could not be evaluated (Error-3015, typically the online
-    CV term lookup failing) and a pass without result give one warning, not errors about the file."""
+    which the structural pass already reported). Rules that could not be evaluated (Error-3015: the CV term lookup on
+    OLS failed) and a pass without result give one error: the semantic check is required and needs network access
+    (design §10), so an incomplete pass must not count as passed."""
     if "Beginning semantic validation" not in text or "No errors found for semantic validation" in text:
         return []
     msgs = parse(text.split("Beginning semantic validation", 1)[1], path)
     found = [m for m in msgs if m["rule"] != SEMANTIC_EXCEPTION]
     if len(found) < len(msgs) or not msgs:
-        found.append(dict(level="warning", rule="semantic_incomplete",
+        found.append(dict(level="error", rule="semantic_incomplete",
                           message="semantic validation incomplete: mapping rules could not be evaluated "
-                                  "(the CV term lookup needs network access)"))
+                                  "(the CV term lookup on OLS needs network access)"))
     return found
 
 

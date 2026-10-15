@@ -60,9 +60,13 @@ The sensitive handling is **optional**. With the preset off, its steps are skipp
                                                                                        ▼
                                                      ASSEMBLE upload set (unpublished, per study)
                                                                                        ▼
-                                                     CHECK (all modes)  +  CHECK_SENSITIVE (sensitive preset)
+                                                     CHECK C5–C9 (all modes)
                                                                                        ▼
-                                                     GATE (status per study) ─► PUBLISH ─► REPORT (public │ private)
+                                                     DEPOSIT_REPORT public (C1–C9) ─► added to upload set
+                                                                                       ▼
+                                                     CHECK_SENSITIVE S1–S5, S7 (sensitive preset; covers the report)
+                                                                                       ▼
+                                                     GATE (status per study) ─► PUBLISH ─► private report (final status)
                                                                                        ▼
                                                      post-run CANARY_SCAN of whole outdir (sensitive)
                                     human gate ─► msdeposit-tools submit (separate CLI)
@@ -204,12 +208,13 @@ workflow MSDEPOSIT {
     ASSEMBLE(DESCRIBE.out.files, MZML_FINALISE.out.mzml, ch_raw_pkg)
 
     CHECK(ASSEMBLE.out.upload_set)                          // validators, integrity, completeness: all modes
-    ch_sensitive_status = params.sensitive_data
+    ch_sensitive_status = params.sensitive_data        // runs on the upload set including the public report
         ? CHECK_SENSITIVE(ASSEMBLE.out.upload_set, VENDOR_METADATA_AND_DENYLIST(ch_raw_unique)).status
         : channel.empty()
+    DEPOSIT_REPORT_PUBLIC(ASSEMBLE.out.upload_set, CHECK.out.status)  // from C1–C9, then added to the upload set
     GATE(CHECK.out.status.mix(ch_sensitive_status).groupTuple())   // [study, status]
     PUBLISH(ASSEMBLE.out.upload_set.join(GATE.out.passed))
-    DEPOSIT_REPORT(...)
+    DEPOSIT_REPORT_PRIVATE(...)                            // details and the final gate status
 
     emit: ...
 }
@@ -233,7 +238,7 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
 | C4 | Finalisation integrity: body hash or element counts equal, index offsets valid, re-read by an independent parser | MZML_FINALISE | yes |
 | C5 | Upload manifest: every referenced file present, no unreferenced files, SHA-256 recorded, MetaboLights file-name rules (`.-_A-Za-z0-9`), no zero-byte files | ASSEMBLE | yes |
 | C6 | MetaboLights validation on the **assembled** set (pinned bundle + OPA, offline) | CHECK | configurable (`fail_on_validation_errors`) |
-| C7 | mzTab-M validation for each selected version (2.0: jmzTab-m 1.0.6 structure + semantic; 2.1: dev validator) | CHECK | configurable |
+| C7 | mzTab-M validation for each selected version (2.0: jmzTab-m 1.0.6 structure + semantic, the semantic pass needs network (OLS); 2.1: dev validator) | CHECK | configurable |
 | C8 | mzQC schema + semantic (pymzqc) | CHECK | configurable |
 | C9 | Completeness: remaining `[[TODO-…]]` placeholders, empty required ISA fields, missing MAF m/z/RT; listed per study | CHECK | configurable (`fail_on_todo_placeholders`) |
 
@@ -274,7 +279,7 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
   - The docs give a fallback if a digest disappears (rebuild from the pwiz Dockerfile, or `thermorawfileparser` for Thermo).
 - **Docker:** the Wine prefix is root-owned, so the module overrides the template's `-u $(id -u):$(id -g)` and chowns its outputs.
 - **Apptainer:** **not supported in 1.0** (decision 2026-10-15; Docker only). Planned for a later release: needs `--writable-tmpfs` or a copied `WINEPREFIX` in `$TMPDIR`, and must be tested on the Wine image first. The `msdeposit-tools` image itself has no such constraint.
-- **`msdeposit-tools` image:** one image for the local modules. It bundles the MetaboLights validation bundle, OPA, jmzTab-m 1.0.6 and the 2.1 validator, so it works offline.
+- **`msdeposit-tools` image:** one image for the local modules. It bundles the MetaboLights validation bundle, OPA, jmzTab-m 1.0.6 and the 2.1 validator, so it works offline, with one exception: the mzTab-M 2.0 **semantic** check (C7) looks up CV terms on OLS and **requires network access** (decision 2026-10-15). The C7 process therefore runs with network; an incomplete semantic pass is an error, never a pass. Only CV accessions are sent, no study data.
 - **MultiQC:** not used, because it would publish sample names. `DEPOSIT_REPORT` replaces it.
 
 ## 11. Submission and accession (outside the pipeline)
@@ -346,3 +351,5 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
 | 2 | Launcher mandatory? | **No.** In sensitive mode the pipeline enforces the important part itself: it refuses to start unless launch and work directories are inside `private_outdir` (`enforce_private_launch`). `msdeposit-run` stays an optional convenience wrapper |
 | 3 | Public deposit report in the study | **Yes, by default** (`FILES/QC/deposit_report.html`). In sensitive mode it is built from an allow-list of non-identifying fields and is scanned by S2 and S6 (§9) |
 | 4 | Platforms | **Docker only for 1.0.** Apptainer/HPC support for the Wine image in a later release |
+| 5 | mzTab-M 2.0 semantic validation offline? | **Network allowed for C7** (2026-10-15): the semantic check is required; an incomplete pass is an error |
+| 6 | Position of the public deposit report | **After C1–C9** (2026-10-15): DEPOSIT_REPORT (public) is written from C1–C9, added to the upload set, then scanned by the sensitive checks (S1–S7); GATE follows. The report therefore shows check results C1–C9, not the final gate status |

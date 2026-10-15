@@ -72,7 +72,7 @@ def test_semantic_messages():
     assert validate_mztab.semantic_messages("No errors found for semantic validation on level Error", p) == []
     assert validate_mztab.semantic_messages("[Error-2000] line 3: structural", p) == []   # semantic step skipped
     msgs = validate_mztab.semantic_messages("Beginning semantic validation of mztab file: /x/y.mzTab\n", p)
-    assert msgs[0]["level"] == "warning" and msgs[0]["rule"] == "semantic_incomplete"
+    assert msgs[0]["level"] == "error" and msgs[0]["rule"] == "semantic_incomplete"
     sem = ("Beginning semantic validation of mztab file: /x/y.mzTab with mapping file: file:/m.xml\n"
            "class ValidationMessage {\n    code: [Error-3013] line -1: The CV with prefix \"UO\" MUST be defined\n}\n"
            "class ValidationMessage {\n    code: [Error-3013] line -1: The CV with prefix \"UO\" MUST be defined\n}\n")
@@ -82,7 +82,7 @@ def test_semantic_messages():
     offline = sem + ('    code: [Error-3015] line -1: An exception occurred during semantic validation: "I/O error on '
                      'GET request for "https://www.ebi.ac.uk/ols/api/ontologies/MS/terms": Connection refused".\n')
     msgs = validate_mztab.semantic_messages(offline, p)
-    assert [m["rule"] for m in msgs] == ["jmztabm_3013", "semantic_incomplete"] and msgs[1]["level"] == "warning"
+    assert [m["rule"] for m in msgs] == ["jmztabm_3013", "semantic_incomplete"] and msgs[1]["level"] == "error"
 
 
 needs_tools = pytest.mark.skipif(
