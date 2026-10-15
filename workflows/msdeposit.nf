@@ -82,10 +82,10 @@ workflow MSDEPOSIT {
     def ch_metadata = groupByStudy(MZML_METADATA.out.json.map { meta, j -> [meta.study, j] }, ch_counts)
 
     //
-    // SENSITIVE (optional): identifier candidates from the vendor metadata and the per-study denylist
+    // IDENTIFIER DENYLIST (sensitive mode, or --identifier_scan): candidates from the vendor metadata, per study
     //
     def ch_denylist = ch_study_json.map { s, _j -> [s, []] }
-    if (cfg.sensitive) {
+    if (cfg.identifier_scan) {
         VENDOR_METADATA(ch_raw_unique.map { meta, path, _c -> [meta, path] })
         def ch_candidates = VENDOR_METADATA.out.dir.map { meta, d -> [meta.study, d] }.groupTuple()
         def ch_denylist_in = ch_study_json
@@ -114,7 +114,7 @@ workflow MSDEPOSIT {
         .map { meta, mzml -> [meta.study, meta, mzml] }
         .combine(ch_plan_ok, by: 0)
         .combine(ch_denylist, by: 0)
-        .map { _s, meta, mzml, plan, deny -> [meta, mzml, plan, deny] }
+        .map { _s, meta, mzml, plan, deny -> [meta, mzml, plan, cfg.sensitive ? deny : []] }   // body rewrite: sensitive only
     MZML_FINALISE(ch_finalise_in, cfg.finalise_mode, cfg.timestamp_policy, cfg.mzml_body_rewrite)
     def ch_finalise = groupByStudy(MZML_FINALISE.out.json.map { meta, j -> [meta.study, j] }, ch_counts)
     def ch_mzml_final = groupByStudy(MZML_FINALISE.out.mzml.map { meta, f -> [meta.study, f] }, ch_counts)
@@ -184,16 +184,20 @@ workflow MSDEPOSIT {
     def ch_upload_set = ASSEMBLE_REPORT.out.upload_set
 
     //
-    // CHECK_SENSITIVE (S3-S5, S7) and IDENTIFIER_SCAN (S1 self-test, S2) on the final upload set
+    // IDENTIFIER_SCAN (S1 self-test, S2; sensitive mode or --identifier_scan) and CHECK_SENSITIVE (S3-S5, S7;
+    // sensitive mode) on the final upload set
     //
     def ch_checks_s = channel.empty()
     def ch_hits = ch_plan_ok.map { s, _p -> [s, []] }
+    if (cfg.identifier_scan) {
+        IDENTIFIER_SCAN(ch_upload_set.join(ch_denylist))
+        ch_checks_s = ch_checks_s.mix(IDENTIFIER_SCAN.out.checks)
+        ch_hits = IDENTIFIER_SCAN.out.hits
+    }
     if (cfg.sensitive) {
         CHECK_SENSITIVE(ch_upload_set.join(ch_plan_ok).join(ch_denylist), ch_runs_csv, cfg.private_outdir,
                         cfg.timestamp_policy)
-        IDENTIFIER_SCAN(ch_upload_set.join(ch_denylist))
-        ch_checks_s = CHECK_SENSITIVE.out.checks.mix(IDENTIFIER_SCAN.out.checks)
-        ch_hits = IDENTIFIER_SCAN.out.hits
+        ch_checks_s = ch_checks_s.mix(CHECK_SENSITIVE.out.checks)
     }
 
     //
