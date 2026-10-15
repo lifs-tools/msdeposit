@@ -166,7 +166,7 @@ Columns: `study`, `source_name`, `sample_name`, then `characteristics:<Name>`, `
 | `PWIZ_TEXT_TO_MZML` | per run | text dump → mzML + round-trip check |
 | `MZML_INDEX` | per run (`format=mzml`) | normalise foreign mzML to indexed mzML with checksum |
 | `MZML_METADATA` | per run | JSON: instrument, components, polarity, ranges, metrics, SHA-1, source SHA-1, nativeID format, **SRM transitions** |
-| `DEPOSIT_PLAN` | per study | **central interface**: assay files, deposited names, MAF names, raw ids, polarity reconciliation; fails on duplicates or inhomogeneous assays → `plan.json` (public) + `mapping.tsv` (private) |
+| `DEPOSIT_PLAN` | per study | **central interface**: assay files, deposited names, MAF names, raw ids, polarity reconciliation; fails on duplicates or inhomogeneous assays → `plan.json` (no paths; kept in `private_outdir`, not part of the upload set) + `mapping.tsv` (private) |
 | `MZML_FINALISE` | per run | `rename`: set `mzML/@id`, `run/@id`, sanitise `sourceFile` locations; `anonymise`: header rewrite (serials, sourceFile names/locations, ids, samples, `fileDescription/contact`, free-text `userParam`s, timestamp policy) + **body rewrite** (on by default via `mzml_body_rewrite`; denylist tokens in chromatogram/spectrum ids, titles and userParams are replaced by neutral placeholders and the index is rebuilt). Always: verification, i.e. the binary payloads must be unchanged (hash over all `<binary>` contents), element counts equal, index valid, independent re-read |
 | `RAW_PACKAGE` | per raw path (standard) | directory formats → ZIP64 `ZIP_STORED` with fixed timestamps; sanitised names; companions kept together |
 | `VENDOR_METADATA` | per raw path (sensitive) | identifier candidates **from metadata members only** (Thermo header/method, Bruker `GlobalMetadata`, Waters `_HEADER.TXT`/`_extern.inf`/`_inlet.inf`, Agilent `AcqData/*.xml`, SCIEX header) + instrument-method dump for protocol drafting (private) |
@@ -176,7 +176,7 @@ Columns: `study`, `source_name`, `sample_name`, then `characteristics:<Name>`, `
 | `ASSEMBLE` | per study | upload set in the work dir (not published): `FILES/RAW_FILES`, `FILES/DERIVED_FILES`, `RESULTS`, `QC`, ISA, `upload_manifest.tsv` |
 | Checks | per file / per study | see §8 |
 | `GATE` | per study | combines check statuses → `[study, status]`; never silently drops a study |
-| `PUBLISH` | per study | publishes only passed upload sets to `outdir`; blocked studies → `private_outdir/blocked/` |
+| `PUBLISH_UPLOAD_SET` | per study | publishes only passed upload sets to `outdir` (`publishDir`); all other outputs, incl. blocked studies (`blocked/<study>`), go to `private_outdir` through the workflow `output {}` block |
 | `DEPOSIT_REPORT` | per study + global | **public** report per study (deposited by default as `FILES/QC/deposit_report.html`; content rules in §9) + **private** report (details, hits, mappings, original names) |
 
 ## 7. Workflow definition (sketch, Nextflow 25.10 strict syntax)
@@ -295,6 +295,25 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
 - **Throughput and retries:** `maxForks` on conversion (replaces the old container cap); Wine failures are retried by exit code with escalating time limits (Agilent IMS ~3 h/file).
 - **Profiles:** institutional/HPC profiles via `custom_config_base`, with an offline option.
 - **Cheap metadata edits:** changing sample metadata recomputes DESCRIBE onwards only; deposited names change only if the plan changes.
+
+### 12.1 Object stores (S3 and compatible)
+
+Inputs, `--outdir` and `--private_outdir` may be object-store URIs (`s3://…`, e.g. MinIO or de.NBI object storage),
+where performance is not critical (tested with an S3-compatible endpoint, 2026-10-15):
+- **Inputs:** all sheets and the run sheet paths may be `s3://` URIs; relative run sheet paths resolve against the run
+  sheet's location. VALIDATE_INPUTS receives *path facts* (exists, directory, top-level entries, SCIEX companions)
+  collected by Nextflow's file API, so it never needs the raw data. Processes that need the data (conversion, fixity,
+  vendor metadata) download it into their task directory; vendor directories are copied recursively.
+- **Outputs:** the workflow `output {}` block writes to `private_outdir` only (relative paths, which work on every
+  storage); the public upload sets are published to `outdir` by PUBLISH_UPLOAD_SET (`publishDir`). Public and private
+  roots may be different buckets. `--publish_dir_mode` must be `copy` for object stores (checked).
+- **Leak boundary:** with an object-store `private_outdir`, the Nextflow launch and work directories (logs, command
+  history, intermediate files) stay local: `--private_launch_dir` names the local private directory that must contain
+  them (checked in sensitive mode). Bucket policies must keep the private bucket private; credentials come from the
+  Nextflow `aws` config scope and are never passed to the task containers.
+- **Costs:** every task downloads its inputs and uploads its outputs; the large mzML files are transferred once per
+  step that reads them (metadata, finalise, assemble). A work directory on object storage is possible (cloud
+  executors) but not needed for this use.
 
 ## 13. Testing
 - **pytest** for every subcommand, including:

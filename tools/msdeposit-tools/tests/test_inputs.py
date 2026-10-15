@@ -115,3 +115,25 @@ def test_key_charset(example_inputs, tmp_path):
         rows[0]["run"] = "r 1; rm -rf"
     _rewrite(example_inputs["input"], bad)
     assert inputs.run(validate_args(example_inputs, tmp_path / "o")) == 1
+
+
+def test_path_facts_replace_filesystem(example_inputs, tmp_path):
+    """Object-store inputs: the pipeline passes facts instead of paths the container could open."""
+    rows = list(csv.DictReader(open(example_inputs["input"])))
+    facts = {r["path"]: {"uri": f"s3://bucket/study/{r['path']}", "exists": True, "is_dir": False,
+                         "children": [], "siblings": []} for r in rows}
+    for r in rows:
+        r["format"], r["vendor"] = "vendor_raw", ""
+        old = r["path"]
+        r["path"] = old.replace(".mzML", ".d")
+        facts[r["path"]] = {"uri": f"s3://bucket/study/{r['path']}", "exists": True, "is_dir": True,
+                            "children": ["AcqData", "desktop.ini"], "siblings": []}
+    _rewrite(example_inputs["input"], lambda rs: rows)
+    (tmp_path / "facts.json").write_text(json.dumps(facts))
+    out = tmp_path / "o"
+    assert inputs.run(validate_args(example_inputs, out, path_facts=tmp_path / "facts.json")) == 0
+    norm = list(csv.DictReader(open(out / "runs.normalised.csv")))
+    assert norm[0]["path"].startswith("s3://bucket/study/") and norm[0]["vendor"] == "agilent"
+    facts[rows[0]["path"]]["exists"] = False
+    (tmp_path / "facts.json").write_text(json.dumps(facts))
+    assert inputs.run(validate_args(example_inputs, tmp_path / "o2", path_facts=tmp_path / "facts.json")) == 1

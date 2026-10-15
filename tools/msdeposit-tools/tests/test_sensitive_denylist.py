@@ -169,3 +169,8 @@ def test_base_dir_components_are_not_harvested():
     # paths outside the base: only the shared leading part is dropped
     assert relative_parts("/data/raw/Haldenbrook/x.raw", "/data/projects/trial") == ["raw", "Haldenbrook", "x"]
     assert relative_parts("/x.raw", "/x.raw") == ["x"]   # the file name itself is always kept
+
+
+def test_object_store_paths():
+    from msdeposit_tools.sensitive.denylist import relative_parts
+    assert relative_parts("s3://trial-in/Haldenbrook/run_01.raw", "s3://trial-in") == ["Haldenbrook", "run_01"]

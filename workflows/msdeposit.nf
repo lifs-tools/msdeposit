@@ -7,6 +7,7 @@
 */
 
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { uriOf                  } from '../subworkflows/local/utils_nfcore_msdeposit_pipeline'
 include { CONVERT                } from '../subworkflows/local/convert'
 include { VALIDATE_INPUTS        } from '../modules/local/validate_inputs'
 include { RAW_FIXITY             } from '../modules/local/raw_fixity'
@@ -33,12 +34,13 @@ include { GATE                   } from '../modules/local/gate'
 workflow MSDEPOSIT {
     take:
     sheets      // map of input files (path or []) by parameter name
-    raw_inputs  // value: list of all raw/companion paths of the run sheet (staged so the container sees them)
+    path_facts  // map: facts of every run sheet path (see pathFacts in utils_nfcore_msdeposit_pipeline)
     cfg         // map: resolved mode switches (see resolveMode in utils_nfcore_msdeposit_pipeline)
 
     main:
     def mode = cfg.sensitive ? 'sensitive' : 'standard'
-    def base_dir = sheets.input.toAbsolutePath().parent.toString()   // relative run sheet paths resolve against it
+    def base_dir = uriOf(sheets.input.parent)   // relative run sheet paths resolve against it
+    def ch_path_facts = channel.of(groovy.json.JsonOutput.toJson(path_facts)).collectFile(name: 'path_facts.json')
 
     //
     // PREPARE: validate the inputs (C1) and build the run channel from the normalised run sheet
@@ -46,7 +48,7 @@ workflow MSDEPOSIT {
     VALIDATE_INPUTS(
         sheets.input, sheets.assays, sheets.samples, sheets.studies, sheets.contacts, sheets.publication,
         sheets.features, sheets.values, sheets.study_variables, sheets.study_variable_members, sheets.transitions,
-        sheets.denylist, raw_inputs, mode, base_dir
+        sheets.denylist, ch_path_facts, mode
     )
     def ch_runs_csv = VALIDATE_INPUTS.out.runs
     def ch_runs = VALIDATE_INPUTS.out.runs
@@ -289,5 +291,5 @@ def groupByStudy(ch, ch_counts) {
 }
 
 def readJson(path) {
-    return new groovy.json.JsonSlurper().parse(path.toFile())
+    return new groovy.json.JsonSlurper().parseText(path.text)
 }

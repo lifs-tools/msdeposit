@@ -135,7 +135,7 @@ workflow PIPELINE_COMPLETION {
 // Returns the names of unexpected entries (study keys and file names only, no paths).
 //
 def outdirInventory(outdir, private_outdir) {
-    def summary = file("${private_outdir}/gate_status.tsv")
+    def summary = file("${private_outdir}/gate_status.tsv")   // works for local paths and object stores
     def passed = summary.exists() ? summary.readLines().findAll { l -> l.endsWith('\tpassed') }.collect { l -> l.tokenize('\t')[0] } : []
     def root = file(outdir)
     if (!root.exists()) {
@@ -145,16 +145,43 @@ def outdirInventory(outdir, private_outdir) {
 }
 
 //
-// Paths of the run sheet (vendor files, directories, companions); staged into VALIDATE_INPUTS only so that the
-// container can see them under their original paths
+// Facts about every path of the run sheet (vendor files, directories, companions), collected with Nextflow's file
+// API so that local paths and object stores (s3://, ...) are handled alike. VALIDATE_INPUTS works on these facts and
+// never needs the raw data itself (design §4.1). Relative paths resolve against the run sheet's directory.
 //
-def rawInputs(input) {
-    def base = file(input).toAbsolutePath().parent
-    def resolve = { p -> p.startsWith('/') ? file(p) : file(base.resolve(p).normalize().toString()) }
-    return samplesheetToList(input, "${projectDir}/assets/schema_input.json").collectMany { row ->
+def pathFacts(input) {
+    def base = file(input).parent
+    def facts = [:]
+    def add = { raw, sciex ->
+        def p = resolveRunPath(base, raw)
+        def f = [uri: uriOf(p), exists: p.exists(), is_dir: p.isDirectory(), children: [], siblings: []]
+        if (f.is_dir) {
+            f.children = p.listFiles().collect { c -> c.name }.sort()
+        }
+        if (sciex && f.exists && !f.is_dir) {
+            f.siblings = p.parent.listFiles()
+                .findAll { c -> c.name.startsWith(p.name) && c.name != p.name && !c.isDirectory() }
+                .collect { c -> uriOf(c) }.sort()
+        }
+        facts[raw] = f
+    }
+    samplesheetToList(input, "${projectDir}/assets/schema_input.json").each { row ->
         def r = row[0]
-        [resolve.call(r.path)] + (r.companions ? r.companions.tokenize(';').collect { c -> resolve.call(c.trim()) } : [])
-    }.unique()
+        add.call(r.path, (r.vendor ?: '') == 'sciex' || r.path.toLowerCase() ==~ /.*\.wiff2?$/)
+        (r.companions ?: '').tokenize(';').collect { c -> c.trim() }.findAll { c -> c }.each { c -> add.call(c, false) }
+    }
+    return facts
+}
+
+def resolveRunPath(base, raw) {
+    return raw ==~ /^[A-Za-z][A-Za-z0-9+.-]*:\/\/.*/ || raw.startsWith('/') ? file(raw) : base.resolve(raw).normalize()
+}
+
+//
+// Path as a string that keeps the scheme of object-store paths (s3://bucket/key); local paths absolute
+//
+def uriOf(path) {
+    return path.scheme == 'file' ? path.toAbsolutePath().normalize().toString() : path.toUriString()
 }
 
 //
@@ -174,13 +201,13 @@ def infoParent() {
 }
 
 def absolute(path) {
-    return path ? file(path).toAbsolutePath().normalize().toString() : null
+    return path ? uriOf(file(path)) : null
 }
 
 def isWithin(child, parent) {
-    def c = file(child).toAbsolutePath().normalize()
-    def p = file(parent).toAbsolutePath().normalize()
-    return c == p || c.startsWith(p)
+    def c = uriOf(file(child.toString()))
+    def p = uriOf(file(parent.toString()))
+    return c == p || c.startsWith(p.endsWith('/') ? p : p + '/')
 }
 
 //
@@ -218,13 +245,22 @@ def resolveMode(params, workflow) {
     if (params.private_outdir && (isWithin(params.private_outdir, params.outdir) || isWithin(params.outdir, params.private_outdir))) {
         errors << "--private_outdir and --outdir must be different and not nested in each other"
     }
+    def remote = { p -> p && file(p.toString()).scheme != 'file' }
     if (cfg.enforce_private_launch && params.private_outdir) {
-        // Nextflow writes .nextflow.log, .nextflow/ (history with command lines) and work/ below the launch directory
-        if (!isWithin(workflow.launchDir, params.private_outdir) || !isWithin(workflow.workDir, params.private_outdir)) {
-            errors << ("sensitive mode: launch Nextflow from a directory inside --private_outdir and keep the work " +
-                       "directory there (cd <private_outdir>/run && nextflow run ... -w <private_outdir>/work), or set " +
-                       "--enforce_private_launch false at your own risk (design §9)")
+        // Nextflow writes .nextflow.log, .nextflow/ (history with command lines) and work/ below the launch directory;
+        // with an object-store private_outdir these stay local, in --private_launch_dir
+        def launch_root = remote.call(params.private_outdir) ? params.private_launch_dir : params.private_outdir
+        if (!launch_root) {
+            errors << "--private_outdir is an object-store URI: set --private_launch_dir to a local private directory " +
+                      "that contains the launch and work directories (design §9)"
+        } else if (!isWithin(workflow.launchDir, launch_root) || !isWithin(workflow.workDir, launch_root)) {
+            errors << ("sensitive mode: launch Nextflow from a directory inside ${remote.call(params.private_outdir) ? '--private_launch_dir' : '--private_outdir'} " +
+                       "and keep the work directory there (cd <private dir>/run && nextflow run ... -w <private dir>/work), " +
+                       "or set --enforce_private_launch false at your own risk (design §9)")
         }
+    }
+    if ((remote.call(params.outdir) || remote.call(params.private_outdir)) && params.publish_dir_mode in ['symlink', 'rellink', 'link']) {
+        errors << "--publish_dir_mode ${params.publish_dir_mode} cannot publish to an object store; use copy"
     }
     if (errors) {
         error("Invalid mode settings:\n  - " + errors.join("\n  - "))

@@ -149,6 +149,12 @@
                     "format": "directory-path",
                     "description": "Private output directory (mappings, check details, denylists, blocked studies, pipeline_info in sensitive mode). Default in standard mode: <outdir>/private. Required in sensitive mode, and neither nested in outdir nor vice versa.",
                     "fa_icon": "fas fa-user-secret"
+                },
+                "private_launch_dir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-user-secret",
+                    "description": "Sensitive mode with an object-store --private_outdir (s3://...): local private directory that must contain the Nextflow launch and work directories (they hold logs and command history)."
                 }
             }
         },

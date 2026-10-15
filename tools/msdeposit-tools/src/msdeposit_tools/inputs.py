@@ -10,7 +10,7 @@ Exit 1 when any error was found (fail fast); the check files are written either 
 
 import copy
 import csv
-import os
+import json
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -56,6 +56,8 @@ def add_arguments(p):
     p.add_argument("--denylist", type=Path, help="user denylist (one token per line or TSV with 'token')")
     p.add_argument("--mode", choices=("standard", "sensitive"), default="standard")
     p.add_argument("--base-dir", type=Path, default=Path.cwd(), help="base for relative paths in the run sheet")
+    p.add_argument("--path-facts", type=Path, help="JSON with the facts of every run sheet path, collected by the "
+                                                  "pipeline (local or object store); replaces filesystem access")
     p.add_argument("--outdir", type=Path, default=Path("."))
 
 
@@ -104,17 +106,73 @@ def load_sheet(path: Path, what: str, required: list[str], allowed: list[str] | 
     return rows
 
 
-def detect_vendor(path: Path) -> str:
-    name = path.name.lower()
-    if path.is_dir():
+class LocalPaths:
+    """Path facts from the local filesystem; relative run sheet paths resolve against `base`."""
+
+    def __init__(self, base: Path):
+        self.base = base.resolve()
+
+    def resolve(self, raw: str) -> str:
+        p = Path(raw)
+        return str(p if p.is_absolute() else self.base / p)
+
+    def exists(self, path: str) -> bool:
+        return Path(path).exists()
+
+    def is_dir(self, path: str) -> bool:
+        return Path(path).is_dir()
+
+    def children(self, path: str) -> set[str]:
+        return {c.name for c in Path(path).iterdir()} if Path(path).is_dir() else set()
+
+    def siblings(self, path: str) -> list[str]:
+        p = Path(path)
+        return [str(x) for x in sorted(p.parent.glob(p.name + "*")) if x != p and x.is_file()]
+
+
+class FactPaths:
+    """Path facts collected by the pipeline (Nextflow's file API, so local paths and object stores such as S3 look
+    the same): {raw run-sheet value: {"uri", "exists", "is_dir", "children", "siblings"}}. No filesystem access."""
+
+    def __init__(self, facts: dict):
+        self.facts = facts
+        self.by_uri = {f["uri"]: f for f in facts.values()}
+
+    def resolve(self, raw: str) -> str:
+        if raw not in self.facts:
+            raise InputError(f"path facts do not cover the run sheet path {raw!r}")
+        return self.facts[raw]["uri"]
+
+    def _f(self, uri: str) -> dict:
+        return self.by_uri.get(uri, {})
+
+    def exists(self, path: str) -> bool:
+        return bool(self._f(path).get("exists"))
+
+    def is_dir(self, path: str) -> bool:
+        return bool(self._f(path).get("is_dir"))
+
+    def children(self, path: str) -> set[str]:
+        return set(self._f(path).get("children") or [])
+
+    def siblings(self, path: str) -> list[str]:
+        return list(self._f(path).get("siblings") or [])
+
+
+def detect_vendor(path, paths=None) -> str:
+    paths = paths or LocalPaths(Path("/"))
+    path = str(path)
+    name = path.rstrip("/").rsplit("/", 1)[-1].lower()
+    if paths.is_dir(path):
         if name.endswith(".raw"):
             return "waters"
         if name.endswith(".d"):
-            if (path / "analysis.tdf").exists():
+            children = paths.children(path)
+            if "analysis.tdf" in children:
                 return "bruker_tdf"
-            if (path / "analysis.baf").exists():
+            if "analysis.baf" in children:
                 return "bruker_baf"
-            if (path / "AcqData").is_dir():
+            if "AcqData" in children:
                 return "agilent"
         return "unknown"
     if name.endswith(".raw"):
@@ -253,7 +311,7 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
                                f"(max. 64 characters, starting with a letter or digit)")
 
     # runs
-    base = args.base_dir.resolve()
+    paths = FactPaths(json.loads(args.path_facts.read_text())) if args.path_facts else LocalPaths(args.base_dir)
     seen_runs = set()
     by_path: dict[tuple, list] = defaultdict(list)
     for r in runs:
@@ -267,15 +325,14 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
             errs.error(s, f"run sheet line {line}: sample '{r['sample']}' not defined in the samples sheet")
         if r["format"] not in FORMATS:
             errs.error(s, f"run sheet line {line}: format '{r['format']}' not in {list(FORMATS)}")
-        p = Path(r["path"])
-        p = p if p.is_absolute() else base / p
-        r["path"] = str(p)
-        if not p.exists():
+        p = paths.resolve(r["path"])
+        r["path"] = p
+        if not paths.exists(p):
             errs.error(s, f"run sheet line {line}: path not found: {p}")
         if r.get("vendor") and r["vendor"] not in VENDORS:
             errs.error(s, f"run sheet line {line}: vendor '{r['vendor']}' not in {list(VENDORS)}")
         if r["format"] == "vendor_raw":
-            detected = detect_vendor(p) if p.exists() else "unknown"
+            detected = detect_vendor(p, paths) if paths.exists(p) else "unknown"
             if r.get("vendor") and detected not in ("unknown", r["vendor"]):
                 errs.error(s, f"run sheet line {line}: vendor '{r['vendor']}' given, '{detected}' detected")
             r["vendor"] = r.get("vendor") or detected
@@ -292,11 +349,11 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
             if not r["run_index"].isdigit() or int(r["run_index"]) < 1:
                 errs.error(s, f"run sheet line {line}: run_index must be a positive integer")
         comps = [c.strip() for c in (r.get("companions") or "").split(";") if c.strip()]
-        comps = [str(Path(c) if Path(c).is_absolute() else base / c) for c in comps]
-        if r["vendor"] == "sciex" and not comps and p.exists():
-            comps = [str(x) for x in sorted(p.parent.glob(p.name + "*")) if x != p and x.is_file()]
+        comps = [paths.resolve(c) for c in comps]
+        if r["vendor"] == "sciex" and not comps and paths.exists(p):
+            comps = paths.siblings(p)
         for c in comps:
-            if not Path(c).exists():
+            if not paths.exists(c) and c not in paths.siblings(p):
                 errs.error(s, f"run sheet line {line}: companion not found: {c}")
         r["companions"] = ";".join(comps)
         if r.get("deposited_name") and safe_name(r["deposited_name"]) != r["deposited_name"]:
@@ -343,7 +400,7 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
     # sensitive mode: run and assay keys appear in logs, tags and traces and must not identify the lab
     if args.mode == "sensitive":
         for r in runs:
-            stem = Path(r["path"]).name
+            stem = r["path"].rstrip("/").rsplit("/", 1)[-1]
             for suffix in VENDOR_RAW_EXT + (".mzml", ".txt"):
                 if stem.lower().endswith(suffix):
                     stem = stem[: -len(suffix)]

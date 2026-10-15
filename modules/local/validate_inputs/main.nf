@@ -17,9 +17,8 @@ process VALIDATE_INPUTS {
     path study_variable_members, stageAs: 'sheets/study_variable_members/*'
     path transitions           , stageAs: 'sheets/transitions/*'
     path denylist              , stageAs: 'sheets/denylist/*'
-    path raw_inputs            , stageAs: 'raw_inputs/??/*'   // staged only so that the container can see the run sheet paths
+    path path_facts            , stageAs: 'path_facts.json'   // facts of the run sheet paths (local or object store)
     val mode
-    val base_dir
 
     output:
     path "validated/runs.normalised.csv", emit: runs
@@ -41,7 +40,7 @@ process VALIDATE_INPUTS {
         --input ${input} --assays ${assays} --samples ${samples} --studies ${studies} \\
         ${optional} \\
         --mode ${mode} \\
-        --base-dir '${base_dir}' \\
+        --path-facts ${path_facts} \\
         --outdir validated \\
         ${args}
     """

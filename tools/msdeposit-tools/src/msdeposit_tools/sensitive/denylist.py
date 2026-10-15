@@ -398,7 +398,7 @@ def strip_data_ext(name: str) -> str:
 
 def path_tokens(path: str) -> list[str]:
     """Components of a POSIX, Windows or file:// path; the last one without data extensions."""
-    p = re.sub(r"^file:/+", "", path.strip())
+    p = re.sub(r"^[A-Za-z][A-Za-z0-9+.-]*://+", "", path.strip())   # file://, s3://, ... (the bucket stays a component)
     parts = [x for x in re.split(r"[\\/]+", p) if x and not re.fullmatch(r"[A-Za-z]:", x)]
     if parts:
         parts[-1] = strip_data_ext(parts[-1])
@@ -410,7 +410,7 @@ def relative_parts(path: str, base: str | None) -> list[str]:
     parts = path_tokens(path)
     if not base:
         return parts
-    base_parts = [x for x in re.split(r"[\\/]+", base.strip()) if x]
+    base_parts = path_tokens(base) if base.strip() else []
     n = 0
     while n < min(len(parts) - 1, len(base_parts)) and parts[n] == base_parts[n]:
         n += 1
