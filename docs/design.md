@@ -353,3 +353,4 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
 | 4 | Platforms | **Docker only for 1.0.** Apptainer/HPC support for the Wine image in a later release |
 | 5 | mzTab-M 2.0 semantic validation offline? | **Network allowed for C7** (2026-10-15): the semantic check is required; an incomplete pass is an error |
 | 6 | Position of the public deposit report | **After C1–C9** (2026-10-15): DEPOSIT_REPORT (public) is written from C1–C9, added to the upload set, then scanned by the sensitive checks (S1–S7); GATE follows. The report therefore shows check results C1–C9, not the final gate status |
+| 7 | MetaboLights validation bundle | **Build of commit `bd31e44`** (2026-09-30, labelled 2.2.1), pinned by commit and SHA-256, not the `v2.2.1` tag: the tag bundle only allows CC0 and lacks the `mhd-enabled` sample template, which CC BY 4.0 / `ms-mhd-enabled` studies need (2026-10-15). Re-pin to the next release tag that includes both |
