@@ -160,3 +160,12 @@ def test_parse_args_defaults():
     dl.add_arguments(p)
     a = p.parse_args(["--study", "S1"])
     assert a.frequency_filter == "off" and a.candidates == []
+
+
+def test_base_dir_components_are_not_harvested():
+    from msdeposit_tools.sensitive.denylist import relative_parts
+    assert relative_parts("/data/projects/trial/Haldenbrook/run_01.raw", "/data/projects/trial") == ["Haldenbrook", "run_01"]
+    assert relative_parts("/data/projects/trial/Haldenbrook/run_01.raw", None)[:2] == ["data", "projects"]
+    # paths outside the base: only the shared leading part is dropped
+    assert relative_parts("/data/raw/Haldenbrook/x.raw", "/data/projects/trial") == ["raw", "Haldenbrook", "x"]
+    assert relative_parts("/x.raw", "/x.raw") == ["x"]   # the file name itself is always kept

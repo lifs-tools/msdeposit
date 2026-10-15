@@ -1,0 +1,3 @@
+study,assay,feature,name,level,formula,mz,rt,adduct,charge,database_id,quantifier
+S1,POS,f1,PC 34:1,species,C42H82NO8P,760.5851,,[M+H]1+,1,,
+S1,NEG,f2,PE 36:2,species,C41H78NO8P,740.5236,5.1,[M-H]1-,-1,,

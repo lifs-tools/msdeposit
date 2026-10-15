@@ -29,7 +29,7 @@ workflow PIPELINE_INITIALISATION {
     validate_params   // boolean: Boolean whether to validate parameters against the schema at runtime
     monochrome_logs   // boolean: Do not use coloured log outputs
     nextflow_cli_args //   array: List of positional nextflow CLI args
-    outdir            //  string: The output directory where the results will be saved
+    _outdir           //  string: unused (pipeline_info goes to infoParent(): private in sensitive mode)
     input             //  string: Path to input samplesheet
     help              // boolean: Display help message and exit
     help_full         // boolean: Show the full help message
@@ -41,26 +41,24 @@ workflow PIPELINE_INITIALISATION {
 
     //
     // Print version and exit if required and dump pipeline parameters to JSON file
+    // (to private_outdir/pipeline_info in sensitive mode: parameter values contain paths)
     //
     UTILS_NEXTFLOW_PIPELINE (
         version,
         true,
-        outdir,
+        infoParent(),
         workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1
     )
 
     //
     // Validate parameters and generate parameter summary to stdout
     //
-
     def before_text = ""
     def after_text = ""
     if (monochrome_logs) {
         before_text = before_text.replaceAll(/\033\[[0-9;]*m/, '')
     }
-
-    command = "nextflow run ${workflow.manifest.name} -profile <docker/singularity/.../institute> --input samplesheet.csv --outdir <OUTDIR>"
-
+    command = "nextflow run ${workflow.manifest.name} -profile docker --input runs.csv --assays assays.csv --samples samples.csv --studies studies.yml --outdir <OUTDIR>"
     UTILS_NFSCHEMA_PLUGIN (
         workflow,
         validate_params,
@@ -82,32 +80,13 @@ workflow PIPELINE_INITIALISATION {
     )
 
     //
-    // Create channel from input file provided through params.input
+    // Mode preset, leak-boundary rules and the private-launch guard (design §5, §9): fail before any task runs
     //
-
-    channel
-        .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
-        .map {
-            meta, fastq_1, fastq_2 ->
-                if (!fastq_2) {
-                    return [ meta.id, meta + [ single_end:true ], [ fastq_1 ] ]
-                } else {
-                    return [ meta.id, meta + [ single_end:false ], [ fastq_1, fastq_2 ] ]
-                }
-        }
-        .groupTuple()
-        .map { samplesheet ->
-            validateInputSamplesheet(samplesheet)
-        }
-        .map {
-            meta, fastqs ->
-                return [ meta, fastqs.flatten() ]
-        }
-        .set { ch_samplesheet }
+    def cfg = resolveMode(params, workflow)
+    checkVendorLicenses(samplesheetToList(input, "${projectDir}/assets/schema_input.json"), cfg)
 
     emit:
-    samplesheet = ch_samplesheet
-    versions    = ch_versions
+    versions   = ch_versions
 }
 
 /*
@@ -120,16 +99,24 @@ workflow PIPELINE_COMPLETION {
 
     take:
     monochrome_logs // boolean: Disable ANSI colour codes in log output
+    outdir          //  string: public output directory
+    cfg             //     map: resolved mode switches
 
     main:
-
     //
-    // Completion email and summary
+    // Completion summary; in sensitive mode also the outdir inventory check (S6, design §8.2)
     //
     workflow.onComplete {
-
         completionSummary(monochrome_logs)
-
+        if (cfg.sensitive) {
+            def problems = outdirInventory(outdir, cfg.private_outdir)
+            if (problems) {
+                log.error("S6 outdir inventory check FAILED: ${problems.size()} unexpected entries in the public outdir " +
+                          "(only upload sets of passed studies may be there): " + problems.join(', '))
+            } else {
+                log.info("S6 outdir inventory check passed")
+            }
+        }
     }
 
     workflow.onError {
@@ -144,19 +131,148 @@ workflow PIPELINE_COMPLETION {
 */
 
 //
-// Validate channels from input samplesheet
+// S6 (sensitive): the public outdir may only contain the upload sets of studies that passed the gate.
+// Returns the names of unexpected entries (study keys and file names only, no paths).
 //
-def validateInputSamplesheet(input) {
-    def (metas, fastqs) = input[1..2]
-
-    // Check that multiple runs of the same sample are of the same datatype i.e. single-end / paired-end
-    def endedness_ok = metas.collect{ meta -> meta.single_end }.unique().size == 1
-    if (!endedness_ok) {
-        error("Please check input samplesheet -> Multiple runs of a sample must be of the same datatype i.e. single-end or paired-end: ${metas[0].id}")
+def outdirInventory(outdir, private_outdir) {
+    def summary = file("${private_outdir}/gate_status.tsv")
+    def passed = summary.exists() ? summary.readLines().findAll { l -> l.endsWith('\tpassed') }.collect { l -> l.tokenize('\t')[0] } : []
+    def root = file(outdir)
+    if (!root.exists()) {
+        return []
     }
-
-    return [ metas[0], fastqs ]
+    return root.listFiles().findAll { f -> !(f.isDirectory() && f.name in passed) }.collect { f -> f.name }.sort()
 }
+
+//
+// Paths of the run sheet (vendor files, directories, companions); staged into VALIDATE_INPUTS only so that the
+// container can see them under their original paths
+//
+def rawInputs(input) {
+    def base = file(input).toAbsolutePath().parent
+    def resolve = { p -> p.startsWith('/') ? file(p) : file(base.resolve(p).normalize().toString()) }
+    return samplesheetToList(input, "${projectDir}/assets/schema_input.json").collectMany { row ->
+        def r = row[0]
+        [resolve.call(r.path)] + (r.companions ? r.companions.tokenize(';').collect { c -> resolve.call(c.trim()) } : [])
+    }.unique()
+}
+
+//
+// Input sheets as staged process inputs ([] when not given)
+//
+def inputSheets(params) {
+    def names = ['input', 'assays', 'samples', 'studies', 'contacts', 'publication', 'features', 'values',
+                 'study_variables', 'study_variable_members', 'transitions', 'denylist', 'allowlist']
+    return names.collectEntries { name -> [name, params[name] ? file(params[name], checkIfExists: true) : []] }
+}
+
+//
+// Directory that receives pipeline_info: private_outdir in sensitive mode (design §9)
+//
+def infoParent() {
+    return params.sensitive_data ? absolute(params.private_outdir) : params.outdir
+}
+
+def absolute(path) {
+    return path ? file(path).toAbsolutePath().normalize().toString() : null
+}
+
+def isWithin(child, parent) {
+    def c = file(child).toAbsolutePath().normalize()
+    def p = file(parent).toAbsolutePath().normalize()
+    return c == p || c.startsWith(p)
+}
+
+//
+// Resolve the mode preset into explicit switches; reject contradicting overrides instead of forcing them (design §5)
+//
+def resolveMode(params, workflow) {
+    def sensitive = params.sensitive_data as boolean
+    def errors = []
+    def required = { name, value ->
+        if (params[name] != null && params[name] != value) {
+            errors << "--${name} ${params[name]} contradicts --sensitive_data (requires ${value})"
+        }
+        value
+    }
+    def pick = { name, standard_default -> params[name] != null ? params[name] : standard_default }
+    def cfg = [sensitive: sensitive]
+    if (sensitive) {
+        cfg.deposit_raw = required.call('deposit_raw', false)
+        cfg.finalise_mode = required.call('finalise_mode', 'anonymise')
+        cfg.deposited_naming = required.call('deposited_naming', 'neutral')
+        cfg.identifier_scan = required.call('identifier_scan', true)
+        cfg.enforce_private_launch = pick.call('enforce_private_launch', true)
+        if (!params.private_outdir) {
+            errors << "--sensitive_data requires --private_outdir"
+        }
+    } else {
+        cfg.deposit_raw = pick.call('deposit_raw', true)
+        cfg.finalise_mode = pick.call('finalise_mode', 'rename')
+        cfg.deposited_naming = pick.call('deposited_naming', 'original')
+        cfg.identifier_scan = pick.call('identifier_scan', false)
+        cfg.enforce_private_launch = pick.call('enforce_private_launch', false)
+    }
+    def outdir = absolute(params.outdir)
+    cfg.private_outdir = absolute(params.private_outdir) ?: "${outdir}/private"
+    if (params.private_outdir && (isWithin(params.private_outdir, params.outdir) || isWithin(params.outdir, params.private_outdir))) {
+        errors << "--private_outdir and --outdir must be different and not nested in each other"
+    }
+    if (cfg.enforce_private_launch && params.private_outdir) {
+        // Nextflow writes .nextflow.log, .nextflow/ (history with command lines) and work/ below the launch directory
+        if (!isWithin(workflow.launchDir, params.private_outdir) || !isWithin(workflow.workDir, params.private_outdir)) {
+            errors << ("sensitive mode: launch Nextflow from a directory inside --private_outdir and keep the work " +
+                       "directory there (cd <private_outdir>/run && nextflow run ... -w <private_outdir>/work), or set " +
+                       "--enforce_private_launch false at your own risk (design §9)")
+        }
+    }
+    if (errors) {
+        error("Invalid mode settings:\n  - " + errors.join("\n  - "))
+    }
+    cfg.info_dir = "${infoParent()}/pipeline_info"
+    cfg.mzml_body_rewrite = params.mzml_body_rewrite
+    cfg.deposit_report = params.deposit_report
+    cfg.timestamp_policy = params.timestamp_policy
+    cfg.thermo_converter = params.thermo_converter
+    cfg.mztab_versions = params.mztab_versions
+    cfg.maf = params.maf
+    cfg.lipid_annotation = params.lipid_annotation
+    cfg.swisslipids_cache = params.swisslipids_cache ? file(params.swisslipids_cache) : []
+    cfg.allow_network = params.allow_network
+    cfg.protocols = params.protocols ? file(params.protocols, checkIfExists: true) : []
+    cfg.controlled_value_profile = params.controlled_value_profile
+    cfg.study_category = params.mtbls_study_category
+    cfg.fail_on_validation_errors = params.fail_on_validation_errors
+    cfg.fail_on_todo_placeholders = params.fail_on_todo_placeholders
+    // parameters shown in the deposit report: names and non-path values only (design §9.6)
+    cfg.report_params = [
+        sensitive_data: sensitive, deposit_raw: cfg.deposit_raw, finalise_mode: cfg.finalise_mode,
+        deposited_naming: cfg.deposited_naming, identifier_scan: cfg.identifier_scan,
+        mzml_body_rewrite: cfg.mzml_body_rewrite, timestamp_policy: cfg.timestamp_policy,
+        mztab_versions: cfg.mztab_versions, maf: cfg.maf, lipid_annotation: cfg.lipid_annotation,
+        thermo_converter: cfg.thermo_converter, mtbls_study_category: cfg.study_category,
+        controlled_value_profile: cfg.controlled_value_profile,
+        fail_on_validation_errors: cfg.fail_on_validation_errors, fail_on_todo_placeholders: cfg.fail_on_todo_placeholders,
+    ]
+    return cfg
+}
+
+//
+// The ProteoWizard image bundles vendor libraries: their licences must be accepted explicitly (design §10)
+//
+def checkVendorLicenses(rows, cfg) {
+    def needs_pwiz = rows.any { row ->
+        def r = row[0]
+        def vendor = r.vendor ?: (r.path.toLowerCase().endsWith('.raw') ? 'thermo-or-waters' : 'other')
+        r.format == 'vendor_raw' && !(vendor == 'thermo' && cfg.thermo_converter == 'thermorawfileparser')
+    }
+    if (needs_pwiz && !params.accept_vendor_licenses) {
+        error("The run sheet contains vendor files converted with the ProteoWizard vendor-reader image. " +
+              "Its use requires accepting the vendor licences: add --accept_vendor_licenses " +
+              "(see https://proteowizard.sourceforge.io/licenses.html)")
+    }
+}
+
 //
 // Generate methods description for MultiQC
 //

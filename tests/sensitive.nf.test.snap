@@ -1,0 +1,91 @@
+{
+    "-profile test_sensitive: anonymised study passes, nothing identifying is published": {
+        "content": [
+            {
+                "ASSEMBLE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "ASSEMBLE_REPORT": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "CHECK": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "CHECK_SENSITIVE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "DEPOSIT_PLAN": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "DEPOSIT_REPORT_PRIVATE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "DEPOSIT_REPORT_PUBLIC": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "GATE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "IDENTIFIER_DENYLIST": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "IDENTIFIER_SCAN": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "ISA": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MAF": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZML_FINALISE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZML_INDEX": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZML_METADATA": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZQC": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZTAB": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "VALIDATE_INPUTS": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "Workflow": {
+                    "lifs-tools/msdeposit": "v1.0.0dev"
+                }
+            },
+            [
+                "S1",
+                "S1/FILES",
+                "S1/FILES/DERIVED_FILES",
+                "S1/FILES/DERIVED_FILES/P1_A_NEG.mzML",
+                "S1/FILES/DERIVED_FILES/P1_A_POS.mzML",
+                "S1/FILES/DERIVED_FILES/QC_01_NEG.mzML",
+                "S1/FILES/DERIVED_FILES/QC_01_POS.mzML",
+                "S1/FILES/QC",
+                "S1/FILES/QC/S1.mzQC",
+                "S1/FILES/QC/deposit_report.html",
+                "S1/FILES/RESULTS",
+                "S1/FILES/RESULTS/S1.mztab-2.0.0-M.mzTab",
+                "S1/a_S1_NEG.txt",
+                "S1/a_S1_POS.txt",
+                "S1/i_Investigation.txt",
+                "S1/m_S1_NEG_maf.tsv",
+                "S1/m_S1_POS_maf.tsv",
+                "S1/s_S1.txt",
+                "S1/upload_manifest.tsv"
+            ]
+        ],
+        "timestamp": "2026-10-15T12:42:31.233798241",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

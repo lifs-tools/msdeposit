@@ -5,8 +5,9 @@ Sources, merged into one `denylist.tsv` (private: `token`, `kind`, `case_sensiti
                  frequency filter or the allowlist)
   candidate      candidates.tsv of `vendor-metadata` (and serials / source file names of mzml-metadata JSONs)
   original_name  original raw/mzML file stems, companion names and path components of runs.normalised.csv
-                 (CONTRACTS.md calls this kind `run_key`; the run and assay *keys* themselves are not added,
-                 S7 checks them against this list instead)
+                 below the part they share with --base-dir (the run sheet's directory, chosen by the depositor;
+                 its own components such as /data/projects are not identifying). The run and assay *keys*
+                 themselves are not added, S7 checks them against this list instead
   variant        transliteration variants of all of the above (ü→ue/u, ß→ss, accents stripped, ue→ü)
 Harvested tokens (candidate, original_name) pass the filters: minimum length 3, not digits/punctuation only,
 not a GUID/hash, not in GENERIC (structural mzML/ISA/mzTab words, vendor software and instrument model names,
@@ -404,16 +405,29 @@ def path_tokens(path: str) -> list[str]:
     return parts
 
 
-def add_original_names(b: Builder, rows: list[dict], study: str):
-    """Original file stems and path components (whole and split into words); words that are part of a sample
-    name or of a run/assay key of the study are skipped (they are deposited or checked by S7 by design)."""
+def relative_parts(path: str, base: str | None) -> list[str]:
+    """Components of `path` after the leading components it shares with `base`."""
+    parts = path_tokens(path)
+    if not base:
+        return parts
+    base_parts = [x for x in re.split(r"[\\/]+", base.strip()) if x]
+    n = 0
+    while n < min(len(parts) - 1, len(base_parts)) and parts[n] == base_parts[n]:
+        n += 1
+    return parts[n:]
+
+
+def add_original_names(b: Builder, rows: list[dict], study: str, base: str | None = None):
+    """Original file stems and path components below the part shared with `base` (whole and split into words);
+    words that are part of a sample name or of a run/assay key of the study are skipped (they are deposited or
+    checked by S7 by design)."""
     rows = [r for r in rows if not study or r.get("study") == study]
     deposited_words = {w.casefold() for r in rows for k in ("sample", "run", "assay", "deposited_name")
                        for w in words(r.get(k, ""))}
     for r in rows:
         paths = [r.get("path", "")] + [c for c in (r.get("companions") or "").split(";") if c]
         for p in paths:
-            for comp in path_tokens(p):
+            for comp in relative_parts(p, base):
                 b.add_harvested(comp, "original_name", "run sheet path")
                 for w in words(comp):
                     if w.casefold() not in deposited_words:
@@ -464,6 +478,7 @@ def add_arguments(p):
     p.add_argument("--user-denylist", type=Path, help="user tokens (never filtered)")
     p.add_argument("--allowlist", type=Path, help="tokens never added from harvested sources (exact match)")
     p.add_argument("--run-keys", type=Path, help="runs.normalised.csv: original file stems and path components")
+    p.add_argument("--base-dir", help="directory of the run sheet: path components shared with it are not harvested")
     p.add_argument("--metadata", nargs="*", type=Path, default=[],
                    help="mzml-metadata JSON files or directories: serial numbers and source file names")
     p.add_argument("--frequency-filter", default="off", help="'off' (default) or 'zipf=<x>' to drop frequent "
@@ -484,7 +499,7 @@ def build(args) -> tuple[list[Entry], Builder]:
         if str(read_json(f).get("schema", "")).startswith("msdeposit/mzml_metadata/"):
             add_metadata(b, f)
     if args.run_keys:
-        add_original_names(b, read_table(args.run_keys, ","), args.study)
+        add_original_names(b, read_table(args.run_keys, ","), args.study, args.base_dir)
     return b.result(), b
 
 

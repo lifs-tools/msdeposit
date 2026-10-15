@@ -1,2 +1,16 @@
 .DS_Store
 pipeline_info/*.{html,json,txt,yml}
+private/pipeline_info/*
+S1/i_Investigation.txt
+S1/upload_manifest.tsv
+S1/FILES/QC/deposit_report.html
+S1/FILES/QC/S1.mzQC
+S1/FILES/RESULTS/*.mzTab
+private/S1/checks/*.json
+private/S1/deposit_report.private.html
+private/S1/gate.json
+private/S1/finalise/*.json
+private/S1/plan.json
+private/S1/mapping.tsv
+private/raw_ids.tsv
+private/runs.normalised.csv

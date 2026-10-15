@@ -108,3 +108,10 @@ def test_vendor_detection(tmp_path):
     (tmp_path / "e.wiff").write_text("")
     got = [inputs.detect_vendor(tmp_path / n) for n in ("a.d", "b.d", "c.raw", "d.raw", "e.wiff")]
     assert got == ["agilent", "bruker_tdf", "waters", "thermo", "sciex"]
+
+
+def test_key_charset(example_inputs, tmp_path):
+    def bad(rows):
+        rows[0]["run"] = "r 1; rm -rf"
+    _rewrite(example_inputs["input"], bad)
+    assert inputs.run(validate_args(example_inputs, tmp_path / "o")) == 1

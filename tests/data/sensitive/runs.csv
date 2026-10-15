@@ -1,0 +1,5 @@
+study,run,assay,sample,format,path,vendor,polarity
+S1,r001,POS,QC_01,mzml,data/lab_file_01.mzML,thermo,positive
+S1,r002,POS,P1_A,mzml,data/lab_file_02.mzML,thermo,positive
+S1,r003,NEG,QC_01,mzml,data/lab_file_03.mzML,thermo,negative
+S1,r004,NEG,P1_A,mzml,data/lab_file_04.mzML,thermo,negative

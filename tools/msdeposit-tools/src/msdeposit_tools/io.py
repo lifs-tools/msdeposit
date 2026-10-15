@@ -3,6 +3,7 @@
 import csv
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 
@@ -10,6 +11,11 @@ CHUNK = 64 << 20
 POL_TOKEN = {"positive": "POS", "negative": "NEG", "alternating": "ALT"}
 VENDORS = ("thermo", "sciex", "agilent", "bruker_tdf", "bruker_baf", "waters", "shimadzu", "unknown")
 CHECK_STATUSES = ("pass", "warn", "fail", "skipped")
+
+
+def redact_errors() -> bool:
+    """Sensitive mode (MSDEPOSIT_REDACT_ERRORS=1): console messages must not carry values such as paths or names."""
+    return os.environ.get("MSDEPOSIT_REDACT_ERRORS", "").strip().lower() not in ("", "0", "false", "no")
 
 
 class InputError(Exception):

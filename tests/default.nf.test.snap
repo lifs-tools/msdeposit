@@ -1,0 +1,131 @@
+{
+    "-profile test": {
+        "content": [
+            {
+                "ASSEMBLE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "ASSEMBLE_REPORT": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "CHECK": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "DEPOSIT_PLAN": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "DEPOSIT_REPORT_PRIVATE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "DEPOSIT_REPORT_PUBLIC": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "GATE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "ISA": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MAF": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZML_FINALISE": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZML_INDEX": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZML_METADATA": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZQC": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "MZTAB": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "VALIDATE_INPUTS": {
+                    "msdeposit-tools": "0.1.0.dev0"
+                },
+                "Workflow": {
+                    "lifs-tools/msdeposit": "v1.0.0dev"
+                }
+            },
+            [
+                "S1",
+                "S1/FILES",
+                "S1/FILES/DERIVED_FILES",
+                "S1/FILES/DERIVED_FILES/HLB_qmf_plasma_007_01.mzML",
+                "S1/FILES/DERIVED_FILES/HLB_qmf_plasma_007_02.mzML",
+                "S1/FILES/DERIVED_FILES/HLB_qmf_plasma_007_03.mzML",
+                "S1/FILES/DERIVED_FILES/HLB_qmf_plasma_007_04.mzML",
+                "S1/FILES/QC",
+                "S1/FILES/QC/S1.mzQC",
+                "S1/FILES/QC/deposit_report.html",
+                "S1/FILES/RESULTS",
+                "S1/FILES/RESULTS/S1.mztab-2.0.0-M.mzTab",
+                "S1/FILES/RESULTS/S1.mztab-2.1.0-M.mzTab",
+                "S1/a_S1_NEG.txt",
+                "S1/a_S1_POS.txt",
+                "S1/i_Investigation.txt",
+                "S1/m_S1_NEG_maf.tsv",
+                "S1/m_S1_POS_maf.tsv",
+                "S1/s_S1.txt",
+                "S1/upload_manifest.tsv",
+                "pipeline_info",
+                "pipeline_info/msdeposit_software_versions.yml",
+                "private",
+                "private/S1",
+                "private/S1/checks",
+                "private/S1/checks/check_C1.json",
+                "private/S1/checks/check_C2.r001.json",
+                "private/S1/checks/check_C2.r002.json",
+                "private/S1/checks/check_C2.r003.json",
+                "private/S1/checks/check_C2.r004.json",
+                "private/S1/checks/check_C3.json",
+                "private/S1/checks/check_C4.r001.json",
+                "private/S1/checks/check_C4.r002.json",
+                "private/S1/checks/check_C4.r003.json",
+                "private/S1/checks/check_C4.r004.json",
+                "private/S1/checks/check_C5.json",
+                "private/S1/checks/check_C6.json",
+                "private/S1/checks/check_C6.private.json",
+                "private/S1/checks/check_C7.json",
+                "private/S1/checks/check_C7.private.json",
+                "private/S1/checks/check_C8.json",
+                "private/S1/checks/check_C8.private.json",
+                "private/S1/checks/check_C9.json",
+                "private/S1/checks/check_C9.private.json",
+                "private/S1/deposit_report.private.html",
+                "private/S1/finalise",
+                "private/S1/finalise/r001.private.json",
+                "private/S1/finalise/r002.private.json",
+                "private/S1/finalise/r003.private.json",
+                "private/S1/finalise/r004.private.json",
+                "private/S1/gate.json",
+                "private/S1/mapping.tsv",
+                "private/S1/plan.json",
+                "private/gate_status.tsv",
+                "private/raw_ids.tsv",
+                "private/runs.normalised.csv"
+            ],
+            [
+                "HLB_qmf_plasma_007_01.mzML:md5,bf96992d497dbad0b1659ad983cb965a",
+                "HLB_qmf_plasma_007_02.mzML:md5,c658d7c08a33073147e13b7ee855ef82",
+                "HLB_qmf_plasma_007_03.mzML:md5,fbd701cacbb03010fb8abec64dba1ee7",
+                "HLB_qmf_plasma_007_04.mzML:md5,671eb6063b1ea3e7edd7da1160394527",
+                "a_S1_NEG.txt:md5,480f68b9d24319f18a72da48a5473810",
+                "a_S1_POS.txt:md5,86c64400ca28a8ad739d6c7f5c1abea8",
+                "m_S1_NEG_maf.tsv:md5,661e76e161cb2a491e5777bf5b01edc1",
+                "m_S1_POS_maf.tsv:md5,2b70cd6efd28f0476d8f3218adfc93b9",
+                "s_S1.txt:md5,8aaf2a1d50551213b9078f75ab753185",
+                "gate_status.tsv:md5,a84447125a5306ce3a8ba8ba88e04bd3"
+            ]
+        ],
+        "timestamp": "2026-10-15T12:36:42.657967639",
+        "meta": {
+            "nf-test": "0.9.5",
+            "nextflow": "25.10.4"
+        }
+    }
+}

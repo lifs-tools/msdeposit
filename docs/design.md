@@ -138,16 +138,12 @@ Columns: `study`, `source_name`, `sample_name`, then `characteristics:<Name>`, `
 | `deposit_raw` | true | false (required) |
 | `finalise_mode` | `rename` (ids/names only) | `anonymise` (required) |
 | `deposited_naming` | `original` (sanitised stem) | `neutral` (required: `<sample>_<POL>[_<acq>]`) |
-| `identifier_scan` | false | true (required) |
-| `scan_mzml` | – | true (required) |
-| `canary_scan` | false | true (required) |
-| `fail_on_identifier_hits` | – | true (required) |
+| `identifier_scan` | false | true (required); scans all files of the upload set incl. mzML, and hits always block (S2) |
 | `mzml_body_rewrite` | – | **true** (default). When false, identifying text in spectrum/chromatogram ids, titles or userParams is not rewritten, and the affected studies are **blocked** by S2 |
 | `enforce_private_launch` | – | **true** (default): refuse to start unless the launch directory and the work directory are inside `private_outdir` (§9) |
 | `deposit_report` | true (uploaded as `FILES/QC/deposit_report.html`) | true, generated in **public-safe form** (§9) |
 | `timestamp_policy` | `keep` | `keep` / `date` (`YYYY-MM-DDT00:00:00`, schema-valid) / `drop`; also applies to ISA comments and mzQC |
-| `private_outdir` | optional | **required**, ≠ `outdir`, neither nested in the other |
-| `email`, `hook_url` | allowed | must be unset |
+| `private_outdir` | optional (default `<outdir>/private`) | **required**, ≠ `outdir`, neither nested in the other |
 
 **Other parameters**
 
@@ -251,7 +247,7 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
 | S3 | **Residual-field check of the anonymised mzML:** no `MS:1000529` serial number, no `sourceFile/@location` paths, no `fileDescription/contact`, no free-text `userParam`s in the header, timestamps match the policy, `mzML/@id` = deposited stem |
 | S4 | **Raw absence:** no vendor raw files or extensions (`.raw`, `.d`, `.wiff`, `.lcd`, …) or zips of them in the upload set; `Raw Spectral Data File` column empty and `Comment[Raw data file identifier]` present |
 | S5 | **Mapping isolation:** `mapping.tsv`, denylist, hits and vendor metadata exist only under `private_outdir`; nothing from `private_outdir` is referenced by the upload set |
-| S6 | **Post-run canary scan (`workflow.onComplete`):** scan everything under `outdir`, including `pipeline_info` and reports, and the console summary for denylist tokens; any hit fails the run and quarantines the affected outputs |
+| S6 | **Outdir inventory (`workflow.onComplete`):** `outdir` may only contain the upload sets of studies that passed the gate (no `pipeline_info`, reports or check files, which all go to `private_outdir`); everything published was scanned by S2 before publication. The full content scan of a directory (`msdeposit-tools canary-scan`, with quarantine) remains available for manual post-run checks and for captured console logs |
 | S7 | **Run-key safety:** run and assay keys, tags and published paths contain no denylist token (they appear in Nextflow logs and traces) |
 
 ## 9. Sensitive data: the leak boundary
@@ -263,7 +259,7 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
      - Nextflow writes `.nextflow.log`, `.nextflow/` (history with full command lines, cache) and by default `work/` into the launch directory. Pipeline configuration cannot relocate them.
      - At startup the pipeline therefore checks that `workflow.launchDir` and `workflow.workDir` lie inside `private_outdir`, and refuses to start otherwise, with a message saying how to launch correctly.
    - **`msdeposit-run`** is an *optional* convenience launcher, not required. It creates the private launch directory, sets `NXF_WORK` and `-log` there, starts Nextflow, and tees the console output into the private root.
-2. **Error output.** Failed tasks print commands and stderr to the console (msconvert echoes source paths). The console is the user's own terminal and is not persisted unless captured. `msdeposit-run` captures it privately, and `CANARY_SCAN` (S6) scans the captured log when present.
+2. **Error output.** Failed tasks print commands and stderr to the console (msconvert echoes source paths). The console is the user's own terminal and is not persisted unless captured. `msdeposit-run` captures it privately, and `msdeposit-tools canary-scan` scans the captured log. With `MSDEPOSIT_REDACT_ERRORS` (set in sensitive mode) the tools print exception types and code locations only.
 3. **Containers.** Only the needed paths are mounted; no network unless `allow_network`.
 4. **What the anonymised mzML keeps:** instrument model, software versions, the vendor file SHA-1 (provenance) and timestamps per policy.
 5. **When body text is identifying** (e.g. SRM chromatogram ids from lab method names): the body rewrite (default on) replaces the affected tokens. With `--mzml_body_rewrite false`, S2 blocks the study, and the private report names the fields.

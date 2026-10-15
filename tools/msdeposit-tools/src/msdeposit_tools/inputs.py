@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from .io import InputError, VENDORS, read_table, safe_name, write_check, write_json, write_table
+from .io import InputError, VENDORS, redact_errors, read_table, safe_name, write_check, write_json, write_table
 
 RUN_COLUMNS = ["study", "run", "assay", "sample", "format", "path", "vendor", "companions", "run_index", "polarity",
                "deposited_name", "raw_id"]
@@ -38,6 +38,7 @@ CONTACT_COLUMNS = ["study", "first_name", "last_name", "email", "affiliation", "
 NUMERIC = {"mz", "rt", "charge", "value", "variation", "q1", "q3", "collision_energy"}
 SAMPLE_PREFIXES = ("characteristics", "factor", "comment")
 VENDOR_RAW_EXT = (".raw", ".d", ".wiff", ".wiff2", ".lcd", ".baf", ".tdf")
+KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")   # study/run/assay keys: used in file names, tags and commands
 
 
 def add_arguments(p):
@@ -243,6 +244,14 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
             errs.error(r["study"], f"samples line {r['_line']}: duplicate sample_name")
         sample_names[r["study"]].add(r["sample_name"])
 
+    for what, rows_, cols in (("run sheet", runs, ("study", "run", "assay")), ("assays", assays, ("study", "assay"))):
+        for r in rows_:
+            for c in cols:
+                if r.get(c) and not KEY.match(r[c]):
+                    errs.error(r.get("study") if KEY.match(r.get("study", "")) else None,
+                               f"{what} line {r['_line']}: {c} key may only contain A-Z a-z 0-9 . _ - "
+                               f"(max. 64 characters, starting with a letter or digit)")
+
     # runs
     base = args.base_dir.resolve()
     seen_runs = set()
@@ -439,7 +448,7 @@ def run(args) -> int:
                                 raw_files=sum(1 for r in raw_rows if r["study"] == s)),
                     summary=f"{len(e)} input errors, {len(w)} warnings",
                     details=[dict(level="error", message=m) for m in e] + [dict(level="warning", message=m) for m in w])
-    if os.environ.get("MSDEPOSIT_REDACT_ERRORS"):   # sensitive mode: messages may contain paths and names
+    if redact_errors():   # sensitive mode: messages may contain paths and names
         print(f"{sum(lv == 'error' for _, lv, _ in errs.items)} errors, "
               f"{sum(lv == 'warning' for _, lv, _ in errs.items)} warnings; details in check_C1.private.json")
     else:

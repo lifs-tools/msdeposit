@@ -12,7 +12,7 @@ import traceback
 from pathlib import Path
 
 from . import __version__
-from .io import InputError
+from .io import InputError, redact_errors
 
 SUBCOMMANDS = {
     # name: (module, one-line help)
@@ -59,11 +59,11 @@ def main(argv=None) -> int:
     try:
         return int(module.run(args) or 0)
     except InputError as e:
-        msg = "input error (details redacted)" if os.environ.get("MSDEPOSIT_REDACT_ERRORS") else str(e)
+        msg = "input error (details redacted)" if redact_errors() else str(e)
         print(f"msdeposit-tools {name}: {msg}", file=sys.stderr)
         return 1
     except Exception as e:
-        if os.environ.get("MSDEPOSIT_REDACT_ERRORS"):
+        if redact_errors():
             # sensitive mode: the console may be shown or logged outside the private area, so report only the
             # exception type and code locations, never values (paths, names) from the message
             frames = traceback.extract_tb(e.__traceback__)

@@ -48,6 +48,8 @@ def add_arguments(p):
     p.add_argument("--raw", nargs="*", type=Path, default=[],
                    help="packaged raw files or directories (standard mode), incl. *.raw_package.json")
     p.add_argument("--report", type=Path, help="public deposit report (deposited as FILES/QC/deposit_report.html)")
+    p.add_argument("--extend", type=Path, help="existing upload set to extend (e.g. with --report): its files are "
+                                             "hard-linked and their manifest hashes reused")
     p.add_argument("--jobs", type=int, default=4, help="parallel hashing threads")
     p.add_argument("--outdir", type=Path, default=Path("."))
 
@@ -158,10 +160,14 @@ def name_problem(rel: str) -> str | None:
     return None
 
 
-def write_manifest(root: Path, jobs: int = 4) -> list[dict]:
+def write_manifest(root: Path, jobs: int = 4, known: dict[str, dict] | None = None) -> list[dict]:
+    """Manifest of all files; `known` manifest rows are reused when the size is unchanged (hard links of hashed files)."""
+    known = known or {}
     files = [f for f in walk(root)[0] if f != MANIFEST]
-    digests = hash_many([root / f for f in files], jobs)
-    rows = [dict(path=f, bytes=(root / f).stat().st_size, sha256=d, kind=kind_of(f)) for f, d in zip(files, digests)]
+    todo = [f for f in files if not (f in known and int(known[f]["bytes"]) == (root / f).stat().st_size)]
+    digests = dict(zip(todo, hash_many([root / f for f in todo], jobs)))
+    rows = [dict(path=f, bytes=(root / f).stat().st_size, sha256=digests.get(f) or known[f]["sha256"], kind=kind_of(f))
+            for f in files]
     write_table(root / MANIFEST, rows, MANIFEST_FIELDS)
     return rows
 
@@ -279,10 +285,22 @@ def run(args) -> int:
     if root.exists() and any(root.iterdir()):
         raise InputError(f"upload set directory exists and is not empty: {root.name}")
     placements, unplanned, hashes, maf_expected = gather(args, plan)
+    known = {}
+    if args.extend:
+        if not (args.extend / MANIFEST).is_file():
+            raise InputError("--extend: not an assembled upload set (no manifest)")
+        files, links = walk(args.extend)
+        if links:
+            raise InputError("--extend: the upload set contains symlinks")
+        known = {r["path"]: r for r in read_table(args.extend / MANIFEST)}
+        for rel in files:
+            if rel != MANIFEST and rel not in placements:
+                placements[rel] = args.extend / rel
+        maf_expected = maf_expected or any(r["kind"] == "maf" for r in known.values())
     for rel, src in sorted(placements.items()):
         link_or_copy(src, root / rel)
     root.mkdir(parents=True, exist_ok=True)
-    write_manifest(root, args.jobs)
+    write_manifest(root, args.jobs, known)
     status, counts, details = check_upload_set(root, plan, maf_expected=maf_expected, expected_sha256=hashes,
                                                unplanned_inputs=unplanned)
     write_check(args.outdir, plan["study"], "C5", status, counts=counts, summary=summary_of(counts), details=details)

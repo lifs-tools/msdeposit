@@ -146,3 +146,25 @@ def test_existing_upload_set_is_refused(setup):
     plan, plan_path, inputs, out = setup
     assemble(inputs, plan_path, out)
     assert cli.main(assemble_argv(inputs, plan_path, out)) == 1
+
+
+def test_extend_adds_report_without_rehashing(setup, tmp_path, monkeypatch):
+    plan, plan_path, inputs, out = setup
+    root, c5 = assemble(inputs, plan_path, out)
+    assert c5["status"] == "pass"
+    report = tmp_path / "deposit_report.html"
+    report.write_text("<html>report</html>")
+    hashed = []
+    import msdeposit_tools.assemble as asm
+    real = asm.hash_many
+    monkeypatch.setattr(asm, "hash_many", lambda paths, jobs: hashed.extend(paths) or real(paths, jobs))
+    out2 = tmp_path / "out2"
+    assert cli.main(["assemble", "--plan", str(plan_path), "--extend", str(root), "--report", str(report),
+                     "--outdir", str(out2)]) == 0
+    assert check_json(out2, "C5")["status"] == "pass"
+    assert [p.name for p in hashed] == ["deposit_report.html"]
+    rows = {r["path"]: r for r in read_table(out2 / "S1" / "upload_manifest.tsv")}
+    old = {r["path"]: r for r in read_table(root / "upload_manifest.tsv")}
+    assert set(rows) == set(old) | {"FILES/QC/deposit_report.html"}
+    assert all(rows[k]["sha256"] == old[k]["sha256"] for k in old)
+    assert os.path.samefile(out2 / "S1" / "FILES/DERIVED_FILES/QC_01.mzML", root / "FILES/DERIVED_FILES/QC_01.mzML")

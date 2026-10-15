@@ -1,33 +1,155 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://raw.githubusercontent.com/lifs-tools/msdeposit/master/assets/schema_input.json",
-    "title": "lifs-tools/msdeposit pipeline - params.input schema",
-    "description": "Schema for the file provided with params.input",
+    "$id": "https://raw.githubusercontent.com/lifs-tools/msdeposit/main/assets/schema_input.json",
+    "title": "lifs-tools/msdeposit pipeline - params.input schema (run sheet)",
+    "description": "One row per run, i.e. per resulting mzML (docs/design.md \u00a74.1). Cross-file rules are checked by VALIDATE_INPUTS.",
     "type": "array",
     "items": {
         "type": "object",
         "properties": {
+            "study": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "errorMessage": "study key: A-Z a-z 0-9 . _ - (max. 64 characters)",
+                "meta": [
+                    "study"
+                ]
+            },
+            "run": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "errorMessage": "run key: A-Z a-z 0-9 . _ - (max. 64 characters); non-identifying in sensitive mode",
+                "meta": [
+                    "run"
+                ]
+            },
+            "assay": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "errorMessage": "assay key: A-Z a-z 0-9 . _ - (max. 64 characters)",
+                "meta": [
+                    "assay"
+                ]
+            },
             "sample": {
                 "type": "string",
-                "pattern": "^\\S+$",
-                "errorMessage": "Sample name must be provided and cannot contain spaces",
-                "meta": ["id"]
+                "minLength": 1,
+                "errorMessage": "ISA sample name must be given",
+                "meta": [
+                    "sample"
+                ]
             },
-            "fastq_1": {
+            "format": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 1 must be provided, cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "enum": [
+                    "vendor_raw",
+                    "mzml",
+                    "pwiz_text"
+                ],
+                "errorMessage": "format: vendor_raw, mzml or pwiz_text",
+                "meta": [
+                    "format"
+                ]
             },
-            "fastq_2": {
+            "path": {
                 "type": "string",
-                "format": "file-path",
-                "exists": true,
-                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?q\\.gz$",
-                "errorMessage": "FastQ file for reads 2 cannot contain spaces and must have extension '.fq.gz' or '.fastq.gz'"
+                "minLength": 1,
+                "meta": [
+                    "path"
+                ],
+                "errorMessage": "path: vendor file or directory, mzML or text dump; relative paths are resolved against the run sheet's directory"
+            },
+            "vendor": {
+                "type": "string",
+                "enum": [
+                    "thermo",
+                    "sciex",
+                    "agilent",
+                    "bruker_tdf",
+                    "bruker_baf",
+                    "waters",
+                    "shimadzu",
+                    "unknown"
+                ],
+                "errorMessage": "vendor: thermo, sciex, agilent, bruker_tdf, bruker_baf, waters, shimadzu",
+                "meta": [
+                    "vendor"
+                ]
+            },
+            "companions": {
+                "type": "string",
+                "errorMessage": "companions: ';'-separated paths of files staged with the run (e.g. .wiff.scan)",
+                "meta": [
+                    "companions"
+                ]
+            },
+            "run_index": {
+                "type": "integer",
+                "minimum": 1,
+                "errorMessage": "run_index: 1-based sample index in a multi-sample file",
+                "meta": [
+                    "run_index"
+                ]
+            },
+            "polarity": {
+                "type": "string",
+                "enum": [
+                    "positive",
+                    "negative",
+                    "alternating"
+                ],
+                "errorMessage": "polarity: positive, negative or alternating",
+                "meta": [
+                    "polarity"
+                ]
+            },
+            "deposited_name": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._-]+$",
+                "errorMessage": "deposited_name: only A-Z a-z 0-9 . _ -",
+                "meta": [
+                    "deposited_name"
+                ]
+            },
+            "raw_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                "errorMessage": "raw_id: A-Z a-z 0-9 . _ -",
+                "meta": [
+                    "raw_id"
+                ]
             }
         },
-        "required": ["sample", "fastq_1"]
-    }
+        "required": [
+            "study",
+            "run",
+            "assay",
+            "sample",
+            "format",
+            "path"
+        ],
+        "allOf": [
+            {
+                "if": {
+                    "properties": {
+                        "format": {
+                            "enum": [
+                                "mzml",
+                                "pwiz_text"
+                            ]
+                        }
+                    }
+                },
+                "then": {
+                    "required": [
+                        "vendor"
+                    ]
+                }
+            }
+        ]
+    },
+    "uniqueEntries": [
+        "study",
+        "run"
+    ]
 }

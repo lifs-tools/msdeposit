@@ -9,25 +9,309 @@
             "title": "Input/output options",
             "type": "object",
             "fa_icon": "fas fa-terminal",
-            "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["input", "outdir"],
+            "description": "Input sheets (docs/design.md \u00a74) and output directories.",
+            "required": [
+                "input",
+                "assays",
+                "samples",
+                "studies",
+                "outdir"
+            ],
             "properties": {
                 "input": {
                     "type": "string",
                     "format": "file-path",
                     "exists": true,
-                    "schema": "assets/schema_input.json",
+                    "description": "Run sheet: one row per run (resulting mzML) with study, run, assay, sample, format and path.",
+                    "fa_icon": "fas fa-file-csv",
                     "mimetype": "text/csv",
                     "pattern": "^\\S+\\.csv$",
-                    "description": "Path to comma-separated file containing information about the samples in the experiment.",
-                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row.",
-                    "fa_icon": "fas fa-file-csv"
+                    "schema": "assets/schema_input.json",
+                    "help_text": "Columns: study, run, assay, sample, format (vendor_raw|mzml|pwiz_text), path, and optionally vendor, companions, run_index, polarity, deposited_name, raw_id. In sensitive mode run keys must not identify the lab (checked)."
+                },
+                "assays": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Assays sheet (CSV): study, assay, technique, polarity, acquisition, column model/type, injection system, measurement type, instrument fallback, protocol keys.",
+                    "fa_icon": "fas fa-file-csv",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "samples": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Samples sheet (CSV): study, source_name, sample_name and characteristics:<Name>[::source|::accession|::unit], factor:<Name>[...], comment:<Name> columns.",
+                    "fa_icon": "fas fa-file-csv",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "studies": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Studies YAML: 'defaults' (merged into each study) and 'studies' with title, description, licence, release date, design descriptors, factors, protocols, accession.",
+                    "fa_icon": "fas fa-file-code",
+                    "pattern": "^\\S+\\.ya?ml$"
+                },
+                "contacts": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Contacts (CSV): study (empty = all studies), first_name, last_name, email, affiliation, address, orcid, roles (';'-separated).",
+                    "fa_icon": "fas fa-users",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "publication": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Publication YAML.",
+                    "fa_icon": "fas fa-book",
+                    "pattern": "^\\S+\\.ya?ml$"
+                },
+                "protocols": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "exists": true,
+                    "description": "Directory with protocol texts <key>.md (all studies) and <study>/<key>.md; unresolved keys become [[TODO-PROTOCOL:<key>]].",
+                    "fa_icon": "fas fa-folder"
+                },
+                "features": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Reported features (CSV): study, assay, feature, name, level, formula, mz, rt, adduct, charge, database_id, quantifier.",
+                    "fa_icon": "fas fa-table",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "values": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Reported values (CSV): study, feature, run or study_variable, value, unit (UO term), variation, variation_type (sd|cv_percent|none).",
+                    "fa_icon": "fas fa-table",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "study_variables": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Study variables (CSV): study, study_variable, description, average_function.",
+                    "fa_icon": "fas fa-table",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "study_variable_members": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Study variable members (CSV): study, study_variable, sample.",
+                    "fa_icon": "fas fa-table",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "transitions": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "SRM transitions (CSV): study, assay, transition, q1, q3, polarity, feature, collision_energy.",
+                    "fa_icon": "fas fa-table",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$"
+                },
+                "denylist": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Additional identifier tokens (one per line, or TSV with a 'token' column); never filtered.",
+                    "fa_icon": "fas fa-ban"
+                },
+                "allowlist": {
+                    "type": "string",
+                    "format": "file-path",
+                    "exists": true,
+                    "description": "Tokens that are allowed although harvested as identifier candidates.",
+                    "fa_icon": "fas fa-check"
                 },
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+                    "description": "Public output directory: receives only the upload sets of studies that passed all checks.",
                     "fa_icon": "fas fa-folder-open"
+                },
+                "private_outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Private output directory (mappings, check details, denylists, blocked studies, pipeline_info in sensitive mode). Default in standard mode: <outdir>/private. Required in sensitive mode, and neither nested in outdir nor vice versa.",
+                    "fa_icon": "fas fa-user-secret"
+                }
+            }
+        },
+        "mode_options": {
+            "title": "Mode options",
+            "type": "object",
+            "fa_icon": "fas fa-shield-alt",
+            "description": "Standard deposition or the sensitive-data preset (docs/design.md \u00a75, \u00a79).",
+            "properties": {
+                "sensitive_data": {
+                    "type": "boolean",
+                    "description": "Sensitive-data preset: anonymised mzML only, raw files kept private, identifier scans, leak boundary. Contradicting switches are rejected.",
+                    "fa_icon": "fas fa-user-shield"
+                },
+                "deposit_raw": {
+                    "type": "boolean",
+                    "description": "Deposit vendor raw files (directory formats zipped). Default: true (standard), false (sensitive, required)."
+                },
+                "finalise_mode": {
+                    "type": "string",
+                    "enum": [
+                        "rename",
+                        "anonymise"
+                    ],
+                    "description": "mzML finalisation. Default: rename (standard), anonymise (sensitive, required)."
+                },
+                "deposited_naming": {
+                    "type": "string",
+                    "enum": [
+                        "original",
+                        "neutral"
+                    ],
+                    "description": "Deposited mzML names: sanitised original stems or neutral <sample>_<POL>[_<acq>]. Default: original (standard), neutral (sensitive, required)."
+                },
+                "identifier_scan": {
+                    "type": "boolean",
+                    "description": "Identifier denylist and scan of the upload set (S1, S2). Default: false (standard), true (sensitive, required)."
+                },
+                "mzml_body_rewrite": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Sensitive mode: replace denylist tokens in spectrum/chromatogram ids, titles and userParams. When false, studies with identifying body text are blocked by S2."
+                },
+                "enforce_private_launch": {
+                    "type": "boolean",
+                    "description": "Refuse to start unless the launch and work directories are inside private_outdir. Default: true in sensitive mode."
+                },
+                "deposit_report": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Add the public deposit report (FILES/QC/deposit_report.html) to the upload set."
+                },
+                "timestamp_policy": {
+                    "type": "string",
+                    "enum": [
+                        "keep",
+                        "date",
+                        "drop"
+                    ],
+                    "default": "keep",
+                    "description": "Acquisition timestamps in mzML and ISA: keep, date only, or drop."
+                }
+            }
+        },
+        "results_options": {
+            "title": "Results options",
+            "type": "object",
+            "fa_icon": "fas fa-chart-bar",
+            "description": "MAF, mzTab-M and lipid annotation.",
+            "properties": {
+                "mztab_versions": {
+                    "type": "string",
+                    "default": "2.0.0-M",
+                    "pattern": "^(2\\.0\\.0-M|2\\.1\\.0-M)(,(2\\.0\\.0-M|2\\.1\\.0-M))?$",
+                    "description": "mzTab-M versions to write: 2.0.0-M (default), 2.1.0-M or both comma-separated."
+                },
+                "maf": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Write MetaboLights metabolite assignment files."
+                },
+                "lipid_annotation": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "goslin",
+                        "goslin+swisslipids"
+                    ],
+                    "default": "none",
+                    "description": "Annotate feature names with Goslin (and SwissLipids, needs a cache or --allow_network)."
+                },
+                "swisslipids_cache": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "SwissLipids lookup cache (TSV), read and updated."
+                },
+                "allow_network": {
+                    "type": "boolean",
+                    "description": "Allow network access for the lipid annotation (SwissLipids). The C7 mzTab-M check always has network (OLS)."
+                }
+            }
+        },
+        "conversion_options": {
+            "title": "Conversion options",
+            "type": "object",
+            "fa_icon": "fas fa-exchange-alt",
+            "description": "Vendor-to-mzML conversion.",
+            "properties": {
+                "accept_vendor_licenses": {
+                    "type": "boolean",
+                    "description": "Required to use the ProteoWizard image with vendor readers (https://proteowizard.sourceforge.io/licenses.html)."
+                },
+                "thermo_converter": {
+                    "type": "string",
+                    "enum": [
+                        "pwiz",
+                        "thermorawfileparser"
+                    ],
+                    "default": "pwiz",
+                    "description": "Converter for Thermo .raw files."
+                }
+            }
+        },
+        "describe_options": {
+            "title": "Describe options",
+            "type": "object",
+            "fa_icon": "fas fa-tags",
+            "description": "ISA-Tab profile.",
+            "properties": {
+                "mtbls_study_category": {
+                    "type": "string",
+                    "enum": [
+                        "ms-mhd-enabled",
+                        "ms-mhd-legacy",
+                        "other"
+                    ],
+                    "default": "ms-mhd-enabled",
+                    "description": "MetaboLights study category."
+                },
+                "controlled_value_profile": {
+                    "type": "string",
+                    "enum": [
+                        "validator",
+                        "mhd"
+                    ],
+                    "default": "validator",
+                    "description": "Controlled values accepted by the bundled validator, or the MetabolomicsHub terms."
+                }
+            }
+        },
+        "check_options": {
+            "title": "Check options",
+            "type": "object",
+            "fa_icon": "fas fa-clipboard-check",
+            "description": "Which check results block a study.",
+            "properties": {
+                "fail_on_validation_errors": {
+                    "type": "boolean",
+                    "description": "Make validator errors (C6-C8) blocking."
+                },
+                "fail_on_todo_placeholders": {
+                    "type": "boolean",
+                    "description": "Make remaining [[TODO-...]] placeholders and empty required fields (C9) blocking; use for submission-ready runs."
                 }
             }
         },
@@ -98,7 +382,14 @@
                     "description": "Method used to save pipeline results to output directory.",
                     "help_text": "The Nextflow `publishDir` option specifies which intermediate files should be saved to the output directory. This option tells the pipeline what method should be used to move these files. See [Nextflow docs](https://www.nextflow.io/docs/latest/process.html#publishdir) for details.",
                     "fa_icon": "fas fa-copy",
-                    "enum": ["symlink", "rellink", "link", "copy", "copyNoFollow", "move"],
+                    "enum": [
+                        "symlink",
+                        "rellink",
+                        "link",
+                        "copy",
+                        "copyNoFollow",
+                        "move"
+                    ],
                     "hidden": true
                 },
                 "monochrome_logs": {
@@ -128,7 +419,10 @@
                     "hidden": true
                 },
                 "help": {
-                    "type": ["boolean", "string"],
+                    "type": [
+                        "boolean",
+                        "string"
+                    ],
                     "description": "Display the help message."
                 },
                 "help_full": {
@@ -145,6 +439,21 @@
     "allOf": [
         {
             "$ref": "#/$defs/input_output_options"
+        },
+        {
+            "$ref": "#/$defs/mode_options"
+        },
+        {
+            "$ref": "#/$defs/results_options"
+        },
+        {
+            "$ref": "#/$defs/conversion_options"
+        },
+        {
+            "$ref": "#/$defs/describe_options"
+        },
+        {
+            "$ref": "#/$defs/check_options"
         },
         {
             "$ref": "#/$defs/institutional_config_options"
