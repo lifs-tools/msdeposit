@@ -1,0 +1,364 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1720 1190" width="1720" height="1190" font-family="Helvetica, Arial, sans-serif">
+  <title>lifs-tools/msdeposit workflow overview</title>
+  <desc>Pre-processing (study adapter, input contract, private launch), the Nextflow pipeline with standard and sensitive-data paths and check steps, and post-processing (review, accession, submission, curation, raw data retention).</desc>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#37474f"/>
+    </marker>
+    <marker id="arrO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e65100"/>
+    </marker>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font-size: 22px; font-weight: bold; fill: #263238; }
+      .sub { font-size: 13px; fill: #546e7a; }
+      .colhead { font-size: 15px; font-weight: bold; fill: #37474f; letter-spacing: 0.5px; }
+      .ext { fill: #eceff1; stroke: #78909c; stroke-width: 1.2; }
+      .pipe { fill: #f5f9ff; stroke: #1565c0; stroke-width: 2; }
+      .swf { fill: #e3f2fd; stroke: #1e88e5; stroke-width: 1.4; }
+      .mod { fill: #ffffff; stroke: #1565c0; stroke-width: 1.3; }
+      .opt { fill: #ffffff; stroke: #1565c0; stroke-width: 1.3; stroke-dasharray: 5 3; }
+      .sens { fill: #fff3e0; stroke: #e65100; stroke-width: 1.8; stroke-dasharray: 8 4; }
+      .smod { fill: #ffffff; stroke: #e65100; stroke-width: 1.3; }
+      .chk { fill: #e8f5e9; stroke: #2e7d32; stroke-width: 1.4; }
+      .pub { fill: #e0f2f1; stroke: #00796b; stroke-width: 1.5; }
+      .priv { fill: #f3e5f5; stroke: #6a1b9a; stroke-width: 1.5; }
+      .gate { fill: #fffde7; stroke: #f9a825; stroke-width: 1.6; }
+      .mn { font-size: 12.5px; font-weight: bold; fill: #0d47a1; }
+      .smn { font-size: 12.5px; font-weight: bold; fill: #bf360c; }
+      .sn { font-size: 13px; font-weight: bold; fill: #1565c0; }
+      .ssn { font-size: 13px; font-weight: bold; fill: #e65100; }
+      .t { font-size: 11.5px; fill: #37474f; }
+      .ts { font-size: 10.5px; fill: #546e7a; }
+      .cn { font-size: 12.5px; font-weight: bold; fill: #1b5e20; }
+      .badge { fill: #2e7d32; }
+      .badgeO { fill: #e65100; }
+      .bt { font-size: 10px; font-weight: bold; fill: #ffffff; }
+      .flow { stroke: #37474f; stroke-width: 1.5; fill: none; marker-end: url(#arr); }
+      .flowO { stroke: #e65100; stroke-width: 1.5; fill: none; stroke-dasharray: 6 3; marker-end: url(#arrO); }
+      .lab { font-size: 10.5px; fill: #455a64; font-style: italic; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1720" height="1190"/>
+  <text class="title" x="20" y="32">lifs-tools/msdeposit: workflow overview</text>
+  <text class="sub" x="520" y="32">Nextflow pipeline (nf-core template) for MetaboLights deposition, with optional sensitive-data path (DRAFT 3)</text>
+
+  <!-- ===================== PRE-PROCESSING ===================== -->
+  <text class="colhead" x="20" y="66">PRE-PROCESSING</text>
+  <text class="ts" x="20" y="80">study-specific, outside the pipeline</text>
+
+  <rect class="ext" x="20" y="90" width="290" height="170" rx="8"/>
+  <text class="mn" x="32" y="110" fill="#37474f">Study adapter (private)</text>
+  <text class="t" x="32" y="130">• parse lab sample lists / templates</text>
+  <text class="t" x="32" y="147">• map raw files ↔ samples, fix errors</text>
+  <text class="t" x="32" y="164">• export results (features, values)</text>
+  <text class="t" x="32" y="181">• study, assay and protocol texts</text>
+  <text class="t" x="32" y="198">• contacts, publication</text>
+  <text class="t" x="32" y="215">• extra denylist tokens (sensitive)</text>
+  <text class="ts" x="32" y="240">e.g. CLIG adapter in ils-clig-data</text>
+
+  <rect class="ext" x="20" y="285" width="290" height="320" rx="8"/>
+  <text class="mn" x="32" y="305" fill="#37474f">Input contract (validated)</text>
+  <text class="t" x="32" y="327">--input        run sheet, 1 row per run</text>
+  <text class="ts" x="44" y="342">format, vendor, path, companions,</text>
+  <text class="ts" x="44" y="356">run_index, sample, assay, raw_id</text>
+  <text class="t" x="32" y="378">--assays       technique, polarity, column</text>
+  <text class="t" x="32" y="397">--samples      ISA-safe encoded columns</text>
+  <text class="t" x="32" y="416">--studies      YAML (defaults, accession)</text>
+  <text class="t" x="32" y="435">--contacts, --publication, --protocols</text>
+  <text class="t" x="32" y="454">--features, --values (optional)</text>
+  <text class="t" x="32" y="473">--study_variables (+ _members)</text>
+  <text class="t" x="32" y="492">--transitions (optional)</text>
+  <text class="t" x="32" y="511">--denylist, --allowlist (sensitive)</text>
+  <text class="t" x="32" y="537">params: --sensitive_data (preset),</text>
+  <text class="t" x="32" y="554">--mztab_versions (2.0.0-M default),</text>
+  <text class="t" x="32" y="571">--mzml_body_rewrite, --deposit_report,</text>
+  <text class="t" x="32" y="588">--accept_vendor_licenses …</text>
+
+  <rect class="sens" x="20" y="630" width="290" height="150" rx="8"/>
+  <text class="smn" x="32" y="650">Private launch (sensitive)</text>
+  <text class="t" x="32" y="670">launch dir + work dir inside</text>
+  <text class="t" x="32" y="687">--private_outdir (enforced by guard),</text>
+  <text class="t" x="32" y="704">so .nextflow.log, history, cache</text>
+  <text class="t" x="32" y="721">and work/ stay private</text>
+  <text class="t" x="32" y="745">msdeposit-run: optional launcher</text>
+  <text class="ts" x="32" y="762">(sets NXF_WORK, -log, captures console)</text>
+
+  <path class="flow" d="M165,260 L165,283"/>
+
+  <!-- ===================== PIPELINE FRAME ===================== -->
+  <rect class="pipe" x="330" y="50" width="1020" height="1060" rx="12"/>
+  <text class="colhead" x="345" y="72" fill="#0d47a1">NEXTFLOW PIPELINE  lifs-tools/msdeposit</text>
+  <text class="ts" x="760" y="72">meta = [id, study, assay, sample, format, vendor, run_index, raw_id] · versions via topic channels</text>
+
+  <!-- inputs into pipeline -->
+  <path class="flow" d="M310,445 C322,445 322,125 348,125"/>
+  <text class="lab" x="232" y="275">samplesheetToList</text>
+  <path class="flowO" d="M310,700 C326,700 326,140 348,140"/>
+
+  <!-- Row 1 -->
+  <rect class="mod" x="350" y="95" width="260" height="62" rx="6"/>
+  <text class="mn" x="362" y="114">PIPELINE_INITIALISATION</text>
+  <text class="t" x="362" y="132">params (nf-schema), preset rules,</text>
+  <text class="t" x="362" y="148">private-launch guard (sensitive)</text>
+
+  <rect class="mod" x="640" y="95" width="250" height="62" rx="6"/>
+  <text class="mn" x="652" y="114">VALIDATE_INPUTS</text>
+  <text class="t" x="652" y="132">schemas, cross-file refs,</text>
+  <text class="t" x="652" y="148">assay homogeneity, run-key safety</text>
+  <rect class="badge" x="856" y="99" width="28" height="16" rx="3"/><text class="bt" x="863" y="111">C1</text>
+
+  <rect class="swf" x="920" y="88" width="410" height="76" rx="8"/>
+  <text class="sn" x="932" y="106">PREPARE</text>
+  <rect class="mod" x="932" y="113" width="388" height="42" rx="6"/>
+  <text class="mn" x="944" y="130">RAW_FIXITY</text>
+  <text class="t" x="1034" y="130">SHA-256 per file + tree hash</text>
+  <text class="t" x="944" y="147">per raw path (deduplicated) → private manifest</text>
+
+  <path class="flow" d="M610,126 L638,126"/>
+  <path class="flow" d="M890,126 L918,126"/>
+
+  <!-- Row 2: CONVERT -->
+  <rect class="swf" x="350" y="190" width="660" height="102" rx="8"/>
+  <text class="sn" x="362" y="208">CONVERT</text>
+  <text class="ts" x="430" y="208">per run · cache 'lenient' · retries · maxForks</text>
+  <rect class="mod" x="362" y="216" width="150" height="66" rx="6"/>
+  <text class="mn" x="372" y="234">PWIZ_MSCONVERT</text>
+  <text class="ts" x="372" y="250">pwiz Wine image (digest)</text>
+  <text class="ts" x="372" y="263">--runIndexSet (wiff)</text>
+  <text class="ts" x="372" y="276">needs licence accept</text>
+  <rect class="opt" x="522" y="216" width="155" height="66" rx="6"/>
+  <text class="mn" x="532" y="234">THERMORAWFILE-</text>
+  <text class="mn" x="532" y="249">PARSER (opt.)</text>
+  <text class="ts" x="532" y="265">nf-core module,</text>
+  <text class="ts" x="532" y="277">Thermo without Wine</text>
+  <rect class="opt" x="687" y="216" width="155" height="66" rx="6"/>
+  <text class="mn" x="697" y="234">PWIZ_TEXT_TO_MZML</text>
+  <text class="ts" x="697" y="250">text dump → mzML</text>
+  <text class="ts" x="697" y="263">+ round-trip check</text>
+  <text class="ts" x="697" y="276">(format = pwiz_text)</text>
+  <rect class="opt" x="852" y="216" width="148" height="66" rx="6"/>
+  <text class="mn" x="862" y="234">MZML_INDEX</text>
+  <text class="ts" x="862" y="250">foreign mzML →</text>
+  <text class="ts" x="862" y="263">indexed + checksum</text>
+  <text class="ts" x="862" y="276">(format = mzml)</text>
+
+  <rect class="mod" x="1040" y="200" width="290" height="82" rx="6"/>
+  <text class="mn" x="1052" y="219">MZML_METADATA</text>
+  <rect class="badge" x="1296" y="204" width="28" height="16" rx="3"/><text class="bt" x="1303" y="216">C2</text>
+  <text class="t" x="1052" y="237">per run, streaming: instrument, polarity,</text>
+  <text class="t" x="1052" y="253">ranges, run metrics, SHA-1, source SHA-1,</text>
+  <text class="t" x="1052" y="269">nativeID format, SRM transitions</text>
+
+  <path class="flow" d="M1125,157 L1125,175 L680,175 L680,188"/>
+  <path class="flow" d="M1010,241 L1038,241"/>
+
+  <!-- Row 3: DEPOSIT_PLAN -->
+  <rect class="mod" x="560" y="318" width="560" height="56" rx="6"/>
+  <text class="mn" x="572" y="337">DEPOSIT_PLAN</text>
+  <text class="t" x="672" y="337">per study (groupKey, remainder: true)</text>
+  <rect class="badge" x="1086" y="322" width="28" height="16" rx="3"/><text class="bt" x="1093" y="334">C3</text>
+  <text class="t" x="572" y="356">deposited names, assay files, MAF names, raw ids, polarity reconciliation;</text>
+  <text class="t" x="572" y="370">fails on duplicates → plan.json (public) + mapping.tsv (private)</text>
+  <path class="flow" d="M1185,282 L1185,300 L840,300 L840,316"/>
+
+  <!-- Row 4: standard vs sensitive -->
+  <rect class="swf" x="350" y="402" width="370" height="160" rx="8"/>
+  <text class="sn" x="362" y="420">standard path (default)</text>
+  <rect class="mod" x="362" y="430" width="346" height="56" rx="6"/>
+  <text class="mn" x="374" y="449">MZML_FINALISE  (mode: rename)</text>
+  <rect class="badge" x="674" y="434" width="28" height="16" rx="3"/><text class="bt" x="681" y="446">C4</text>
+  <text class="t" x="374" y="467">mzML/run ids = deposited name, sanitise</text>
+  <text class="t" x="374" y="481">sourceFile locations; verify payloads</text>
+  <rect class="mod" x="362" y="494" width="346" height="58" rx="6"/>
+  <text class="mn" x="374" y="513">RAW_PACKAGE</text>
+  <text class="t" x="374" y="531">vendor raw files for deposition; folders →</text>
+  <text class="t" x="374" y="545">ZIP64 (stored, fixed timestamps), companions</text>
+
+  <rect class="sens" x="740" y="402" width="590" height="160" rx="8"/>
+  <text class="ssn" x="752" y="420">SENSITIVE_DATA  (--sensitive_data)</text>
+  <text class="ts" x="1000" y="420">raw files not deposited · outputs routed to private_outdir</text>
+  <rect class="smod" x="752" y="430" width="270" height="56" rx="6"/>
+  <text class="smn" x="764" y="449">VENDOR_METADATA</text>
+  <text class="t" x="764" y="467">identifier candidates from metadata</text>
+  <text class="t" x="764" y="481">members + instrument method dumps</text>
+  <rect class="smod" x="1040" y="430" width="278" height="56" rx="6"/>
+  <text class="smn" x="1052" y="449">IDENTIFIER_DENYLIST</text>
+  <text class="t" x="1052" y="467">per study; --denylist tokens unfiltered;</text>
+  <text class="t" x="1052" y="481">frequency filter explicit/optional</text>
+  <rect class="smod" x="752" y="494" width="566" height="58" rx="6"/>
+  <text class="smn" x="764" y="513">MZML_FINALISE  (mode: anonymise)</text>
+  <rect class="badgeO" x="1284" y="498" width="28" height="16" rx="3"/><text class="bt" x="1291" y="510">C4</text>
+  <text class="t" x="764" y="531">header: serials, sourceFile names/paths, ids, samples, contacts, userParams, timestamps;</text>
+  <text class="t" x="764" y="545">body rewrite of ids/titles/userParams (default on; off → study blocked); payloads verified</text>
+  <path class="flowO" d="M1022,458 L1038,458"/>
+  <path class="flowO" d="M1179,486 L1179,492"/>
+
+  <path class="flow" d="M700,374 L535,374 L535,400"/>
+  <path class="flowO" d="M980,374 L980,400"/>
+  <text class="lab" x="545" y="394">sensitive_data = false</text>
+  <text class="lab" x="990" y="394">sensitive_data = true</text>
+
+  <!-- Row 5: DESCRIBE -->
+  <rect class="swf" x="350" y="590" width="980" height="112" rx="8"/>
+  <text class="sn" x="362" y="608">DESCRIBE</text>
+  <text class="ts" x="440" y="608">per study, from plan + metadata + inputs; hashes of the deposited mzML</text>
+  <rect class="mod" x="362" y="616" width="150" height="76" rx="6"/>
+  <text class="mn" x="372" y="634">ISA_STUDY</text>
+  <text class="ts" x="372" y="650">i_, s_, a_ files;</text>
+  <text class="ts" x="372" y="663">raw column filled</text>
+  <text class="ts" x="372" y="676">(standard) or empty +</text>
+  <text class="ts" x="372" y="689">raw data file id (sens.)</text>
+  <rect class="opt" x="522" y="616" width="140" height="76" rx="6"/>
+  <text class="mn" x="532" y="634">LIPID_ANNOTATE</text>
+  <text class="ts" x="532" y="650">(optional) Goslin;</text>
+  <text class="ts" x="532" y="663">SwissLipids only with</text>
+  <text class="ts" x="532" y="676">--allow_network or</text>
+  <text class="ts" x="532" y="689">cache</text>
+  <rect class="mod" x="672" y="616" width="130" height="76" rx="6"/>
+  <text class="mn" x="682" y="634">MAF</text>
+  <text class="ts" x="682" y="650">per assay; m/z from</text>
+  <text class="ts" x="682" y="663">transitions / features</text>
+  <rect class="mod" x="812" y="616" width="170" height="76" rx="6"/>
+  <text class="mn" x="822" y="634">MZTAB</text>
+  <text class="ts" x="822" y="650">--mztab_versions</text>
+  <text class="t" x="822" y="665">2.0.0-M (default)</text>
+  <text class="ts" x="822" y="680">2.1.0-M (optional)</text>
+  <rect class="mod" x="992" y="616" width="130" height="76" rx="6"/>
+  <text class="mn" x="1002" y="634">MZQC</text>
+  <text class="ts" x="1002" y="650">run-level metrics,</text>
+  <text class="ts" x="1002" y="663">no serials</text>
+  <rect class="mod" x="1132" y="616" width="188" height="76" rx="6"/>
+  <text class="mn" x="1142" y="634">DEPOSIT_REPORT</text>
+  <text class="ts" x="1142" y="650">public (FILES/QC/, default;</text>
+  <text class="ts" x="1142" y="663">allow-list fields only in</text>
+  <text class="ts" x="1142" y="676">sensitive mode) + private</text>
+  <text class="ts" x="1142" y="689">(details, hits, mappings)</text>
+
+  <path class="flow" d="M535,562 L535,588"/>
+  <path class="flowO" d="M1035,562 L1035,588"/>
+
+  <!-- Row 6: ASSEMBLE -->
+  <rect class="mod" x="560" y="728" width="560" height="50" rx="6"/>
+  <text class="mn" x="572" y="747">ASSEMBLE</text>
+  <text class="t" x="650" y="747">upload set per study (not yet published)</text>
+  <rect class="badge" x="1086" y="732" width="28" height="16" rx="3"/><text class="bt" x="1093" y="744">C5</text>
+  <text class="t" x="572" y="768">FILES/RAW_FILES (std.) · DERIVED_FILES · RESULTS · QC · ISA/MAF · upload_manifest.tsv</text>
+  <path class="flow" d="M840,702 L840,726"/>
+
+  <!-- Row 7: CHECK and CHECK_SENSITIVE -->
+  <rect class="chk" x="350" y="806" width="470" height="128" rx="8"/>
+  <text class="cn" x="362" y="825">CHECK  (all modes)</text>
+  <text class="t" x="362" y="846">C6  MetaboLights validation (pinned bundle + OPA, offline)</text>
+  <text class="t" x="362" y="865">C7  mzTab-M per selected version (jmzTab-m 1.0.6 / 2.1)</text>
+  <text class="t" x="362" y="884">C8  mzQC schema + semantic (pymzqc)</text>
+  <text class="t" x="362" y="903">C9  completeness: [[TODO]] placeholders, empty fields</text>
+  <text class="ts" x="362" y="923">C1–C5 run in the steps above · blocking or configurable</text>
+
+  <rect class="sens" x="850" y="806" width="480" height="128" rx="8"/>
+  <text class="ssn" x="862" y="825">CHECK_SENSITIVE  (all blocking)</text>
+  <text class="t" x="862" y="845">S1  scanner self-test with planted canary tokens</text>
+  <text class="t" x="862" y="862">S2  identifier scan: all files incl. mzML text + file names</text>
+  <text class="t" x="862" y="879">S3  residual fields in mzML (serials, paths, contacts …)</text>
+  <text class="t" x="862" y="896">S4  no raw files · S5  mapping isolation</text>
+  <text class="t" x="862" y="913">S7  run keys / tags / paths free of denylist tokens</text>
+  <text class="ts" x="862" y="928">hits → private_outdir only</text>
+
+  <path class="flow" d="M700,778 L585,778 L585,804"/>
+  <path class="flowO" d="M980,778 L1090,778 L1090,804"/>
+
+  <!-- Row 8: GATE, PUBLISH, outputs -->
+  <rect class="gate" x="350" y="960" width="200" height="58" rx="6"/>
+  <text class="mn" x="362" y="980" fill="#8d6e00">GATE</text>
+  <text class="t" x="362" y="998">[study, status] per study;</text>
+  <text class="t" x="362" y="1012">no silent drops</text>
+  <rect class="mod" x="580" y="960" width="210" height="58" rx="6"/>
+  <text class="mn" x="592" y="980">PUBLISH  (output {})</text>
+  <text class="t" x="592" y="998">passed sets → outdir; routing</text>
+  <text class="t" x="592" y="1012">per output, publish_mode link</text>
+  <rect class="pub" x="820" y="960" width="245" height="58" rx="6"/>
+  <text class="mn" x="832" y="980" fill="#004d40">outdir (public)</text>
+  <text class="t" x="832" y="998">upload sets, upload_manifest,</text>
+  <text class="t" x="832" y="1012">public reports</text>
+  <rect class="priv" x="1085" y="960" width="245" height="58" rx="6"/>
+  <text class="mn" x="1097" y="980" fill="#4a148c">private_outdir</text>
+  <text class="t" x="1097" y="998">fixity, mappings, denylist, hits,</text>
+  <text class="t" x="1097" y="1012">blocked/, pipeline_info, logs</text>
+
+  <path class="flow" d="M585,934 L585,948 L450,948 L450,958"/>
+  <path class="flowO" d="M1090,934 L1090,948 L470,948"/>
+  <path class="flow" d="M550,989 L578,989"/>
+  <path class="flow" d="M790,989 L818,989"/>
+  <path class="flow" d="M450,1018 L450,1030 L1207,1030 L1207,1020" stroke-dasharray="3 3"/>
+  <text class="lab" x="700" y="1043">blocked studies + all private outputs</text>
+
+  <!-- Row 9: onComplete -->
+  <rect class="mod" x="350" y="1052" width="980" height="46" rx="6"/>
+  <text class="mn" x="362" y="1071">workflow.onComplete</text>
+  <text class="t" x="520" y="1071">exit non-zero if any study is blocked · version summary (topic channels)</text>
+  <rect class="badgeO" x="362" y="1078" width="28" height="16" rx="3"/><text class="bt" x="369" y="1090">S6</text>
+  <text class="t" x="398" y="1091">sensitive: post-run canary scan of the whole outdir (incl. pipeline_info, reports, captured console)</text>
+
+  <!-- ===================== POST-PROCESSING ===================== -->
+  <text class="colhead" x="1370" y="66">POST-PROCESSING</text>
+  <text class="ts" x="1370" y="80">outside the pipeline, human-gated</text>
+
+  <rect class="ext" x="1370" y="90" width="330" height="112" rx="8"/>
+  <text class="mn" x="1382" y="110" fill="#37474f">Human review</text>
+  <text class="t" x="1382" y="130">• public + private reports</text>
+  <text class="t" x="1382" y="147">• resolve TODOs, blocked studies,</text>
+  <text class="t" x="1382" y="164">  questionnaires to labs → re-run</text>
+  <text class="t" x="1382" y="181">• approval file per study</text>
+
+  <rect class="ext" x="1370" y="222" width="330" height="100" rx="8"/>
+  <text class="mn" x="1382" y="242" fill="#37474f">MetaboLights accession</text>
+  <text class="t" x="1382" y="262">create study → accession in --studies</text>
+  <text class="t" x="1382" y="279">→ re-run with -resume (DESCRIBE onwards;</text>
+  <text class="t" x="1382" y="296">mzML names have no accession)</text>
+
+  <rect class="ext" x="1370" y="342" width="330" height="150" rx="8"/>
+  <text class="mn" x="1382" y="362" fill="#37474f">msdeposit-tools submit</text>
+  <text class="t" x="1382" y="382">upload via FTP/Aspera + mtbls API;</text>
+  <text class="t" x="1382" y="399">refuses without:</text>
+  <text class="t" x="1392" y="416">• approval file</text>
+  <text class="t" x="1392" y="433">• matching upload manifest</text>
+  <text class="t" x="1392" y="450">• passed validation, no TODOs</text>
+  <text class="t" x="1392" y="467">• (sensitive) S1–S7 passed</text>
+
+  <rect class="ext" x="1370" y="512" width="330" height="78" rx="8"/>
+  <text class="mn" x="1382" y="532" fill="#37474f">MetaboLights curation</text>
+  <text class="t" x="1382" y="552">remote validation, curation,</text>
+  <text class="t" x="1382" y="569">release date / embargo</text>
+
+  <rect class="sens" x="1370" y="612" width="330" height="128" rx="8"/>
+  <text class="smn" x="1382" y="632">Raw data retention (sensitive)</text>
+  <text class="t" x="1382" y="652">vendor raw files stay private;</text>
+  <text class="t" x="1382" y="669">two copies, periodic fixity checks</text>
+  <text class="t" x="1382" y="686">against the RAW_FIXITY manifest;</text>
+  <text class="t" x="1382" y="703">access on request via study</text>
+  <text class="t" x="1382" y="720">coordination (raw data file ids)</text>
+
+  <path class="flow" d="M1350,120 L1368,120"/>
+  <path class="flow" d="M1535,202 L1535,220"/>
+  <path class="flow" d="M1535,322 L1535,340"/>
+  <path class="flow" d="M1535,492 L1535,510"/>
+  <path class="flowO" d="M1330,1000 C1360,1000 1352,690 1368,690"/>
+  <path class="flow" d="M1370,300 C1356,300 1358,640 1334,640" stroke-dasharray="3 3"/>
+
+  <!-- ===================== LEGEND ===================== -->
+  <g transform="translate(20,810)">
+    <text class="colhead" x="0" y="0">LEGEND</text>
+    <rect class="ext" x="0" y="12" width="26" height="16" rx="3"/><text class="t" x="34" y="25">pre-/post-processing (outside Nextflow)</text>
+    <rect class="swf" x="0" y="36" width="26" height="16" rx="3"/><text class="t" x="34" y="49">subworkflow</text>
+    <rect class="mod" x="0" y="60" width="26" height="16" rx="3"/><text class="t" x="34" y="73">module (process)</text>
+    <rect class="opt" x="0" y="84" width="26" height="16" rx="3"/><text class="t" x="34" y="97">optional module</text>
+    <rect class="sens" x="0" y="108" width="26" height="16" rx="3"/><text class="t" x="34" y="121">sensitive-data path (--sensitive_data)</text>
+    <rect class="chk" x="0" y="132" width="26" height="16" rx="3"/><text class="t" x="34" y="145">check steps</text>
+    <rect class="badge" x="0" y="156" width="26" height="16" rx="3"/><text class="bt" x="5" y="168">C#</text><text class="t" x="34" y="169">check (all modes)</text>
+    <rect class="badgeO" x="0" y="180" width="26" height="16" rx="3"/><text class="bt" x="5" y="192">S#</text><text class="t" x="34" y="193">sensitive check</text>
+    <rect class="pub" x="0" y="204" width="26" height="16" rx="3"/><text class="t" x="34" y="217">public output</text>
+    <rect class="priv" x="0" y="228" width="26" height="16" rx="3"/><text class="t" x="34" y="241">private output</text>
+    <line x1="0" y1="262" x2="26" y2="262" class="flow"/><text class="t" x="34" y="266">data flow</text>
+    <line x1="0" y1="282" x2="26" y2="282" class="flowO"/><text class="t" x="34" y="286">sensitive-mode flow</text>
+  </g>
+</svg>

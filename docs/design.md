@@ -1,6 +1,6 @@
 # lifs-tools/msdeposit: Design
 
-Status: **DRAFT 2 (after critical review)** · 2026-10-15 · Author: Nils Hoffmann (with Claude) · Derived from the CLIG ring-trial deposition scripts (`ils-clig-data/scripts/mtbls`). §14 lists the review findings and how they were resolved.
+Status: **DRAFT 3 (review decisions recorded, §15)** · 2026-10-15 · Author: Nils Hoffmann (with Claude) · Derived from the CLIG ring-trial deposition scripts (`ils-clig-data/scripts/mtbls`). §14 lists the review findings and how they were resolved.
 
 ## 1. Purpose and scope
 
@@ -43,6 +43,10 @@ The sensitive handling is **optional**. With the preset off, its steps are skipp
 | One per-study run manifest (`assays.json`) was the hidden central interface of the old code | An explicit **DEPOSIT_PLAN** artefact (§6) |
 
 ## 3. Architecture
+
+![msdeposit workflow overview](images/msdeposit_overview.svg)
+
+*Figure 1: Pre-processing, Nextflow pipeline (standard and sensitive paths, check steps C1–C9 / S1–S7) and post-processing.*
 
 ```
  study adapter (private)        lifs-tools/msdeposit
@@ -134,6 +138,9 @@ Columns: `study`, `source_name`, `sample_name`, then `characteristics:<Name>`, `
 | `scan_mzml` | – | true (required) |
 | `canary_scan` | false | true (required) |
 | `fail_on_identifier_hits` | – | true (required) |
+| `mzml_body_rewrite` | – | **true** (default). When false, identifying text in spectrum/chromatogram ids, titles or userParams is not rewritten, and the affected studies are **blocked** by S2 |
+| `enforce_private_launch` | – | **true** (default): refuse to start unless the launch directory and the work directory are inside `private_outdir` (§9) |
+| `deposit_report` | true (uploaded as `FILES/QC/deposit_report.html`) | true, generated in **public-safe form** (§9) |
 | `timestamp_policy` | `keep` | `keep` / `date` / `drop`; also applies to ISA comments and mzQC |
 | `private_outdir` | optional | **required**, ≠ `outdir`, neither nested in the other |
 | `email`, `hook_url` | allowed | must be unset |
@@ -160,7 +167,7 @@ Columns: `study`, `source_name`, `sample_name`, then `characteristics:<Name>`, `
 | `MZML_INDEX` | per run (`format=mzml`) | normalise foreign mzML to indexed mzML with checksum |
 | `MZML_METADATA` | per run | JSON: instrument, components, polarity, ranges, metrics, SHA-1, source SHA-1, nativeID format, **SRM transitions** |
 | `DEPOSIT_PLAN` | per study | **central interface**: assay files, deposited names, MAF names, raw ids, polarity reconciliation; fails on duplicates or inhomogeneous assays → `plan.json` (public) + `mapping.tsv` (private) |
-| `MZML_FINALISE` | per run | `rename`: set `mzML/@id`, `run/@id`, sanitise `sourceFile` locations; `anonymise`: header rewrite (serials, sourceFile names/locations, ids, samples, `fileDescription/contact`, free-text `userParam`s, timestamp policy) + optional **body rewrite** (chromatogram/spectrum ids, titles, userParams) with index rebuild; always: verification (body hash or element counts, index, re-read) |
+| `MZML_FINALISE` | per run | `rename`: set `mzML/@id`, `run/@id`, sanitise `sourceFile` locations; `anonymise`: header rewrite (serials, sourceFile names/locations, ids, samples, `fileDescription/contact`, free-text `userParam`s, timestamp policy) + **body rewrite** (on by default via `mzml_body_rewrite`; denylist tokens in chromatogram/spectrum ids, titles and userParams are replaced by neutral placeholders and the index is rebuilt). Always: verification, i.e. the binary payloads must be unchanged (hash over all `<binary>` contents), element counts equal, index valid, independent re-read |
 | `RAW_PACKAGE` | per raw path (standard) | directory formats → ZIP64 `ZIP_STORED` with fixed timestamps; sanitised names; companions kept together |
 | `VENDOR_METADATA` | per raw path (sensitive) | identifier candidates **from metadata members only** (Thermo header/method, Bruker `GlobalMetadata`, Waters `_HEADER.TXT`/`_extern.inf`/`_inlet.inf`, Agilent `AcqData/*.xml`, SCIEX header) + instrument-method dump for protocol drafting (private) |
 | `IDENTIFIER_DENYLIST` | per study (sensitive) | candidates + `--denylist` (unfiltered) + run/assay names → denylist; the frequency filter is explicit and optional |
@@ -170,7 +177,7 @@ Columns: `study`, `source_name`, `sample_name`, then `characteristics:<Name>`, `
 | Checks | per file / per study | see §8 |
 | `GATE` | per study | combines check statuses → `[study, status]`; never silently drops a study |
 | `PUBLISH` | per study | publishes only passed upload sets to `outdir`; blocked studies → `private_outdir/blocked/` |
-| `DEPOSIT_REPORT` | global | **public** report (counts, completeness, check status; no names) + **private** report (details, hits, mappings) |
+| `DEPOSIT_REPORT` | per study + global | **public** report per study (deposited by default as `FILES/QC/deposit_report.html`; content rules in §9) + **private** report (details, hits, mappings, original names) |
 
 ## 7. Workflow definition (sketch, Nextflow 25.10 strict syntax)
 
@@ -247,11 +254,18 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
 1. **Nextflow artefacts.**
    - The `sensitive` profile (set by the preset) sends `params_*.json`, the execution report, timeline, trace and DAG to `private_outdir/pipeline_info`.
    - Notifications are disabled and process tags use `meta.raw_id`.
-   - `.nextflow.log`, `.nextflow/` (history, cache) and `work/` are controlled by a **launcher** (`msdeposit-run`). It runs `nextflow -log <private>/nextflow.log run …` from a launch directory under the private root, and sets `NXF_WORK` there.
-2. **Error output.** Failed tasks print commands and stderr (msconvert echoes source paths). The launcher captures the console to the private root; `CANARY_SCAN` (S6) also scans it.
+   - **Launch-location guard** (`enforce_private_launch`, on in sensitive mode):
+     - Nextflow writes `.nextflow.log`, `.nextflow/` (history with full command lines, cache) and by default `work/` into the launch directory. Pipeline configuration cannot relocate them.
+     - At startup the pipeline therefore checks that `workflow.launchDir` and `workflow.workDir` lie inside `private_outdir`, and refuses to start otherwise, with a message saying how to launch correctly.
+   - **`msdeposit-run`** is an *optional* convenience launcher, not required. It creates the private launch directory, sets `NXF_WORK` and `-log` there, starts Nextflow, and tees the console output into the private root.
+2. **Error output.** Failed tasks print commands and stderr to the console (msconvert echoes source paths). The console is the user's own terminal and is not persisted unless captured. `msdeposit-run` captures it privately, and `CANARY_SCAN` (S6) scans the captured log when present.
 3. **Containers.** Only the needed paths are mounted; no network unless `allow_network`.
 4. **What the anonymised mzML keeps:** instrument model, software versions, the vendor file SHA-1 (provenance) and timestamps per policy.
-5. **When body text is identifying** (e.g. SRM chromatogram ids from lab method names): the optional body-rewrite mode replaces ids, titles and userParams. Without it, S2 blocks the study, and the report says why.
+5. **When body text is identifying** (e.g. SRM chromatogram ids from lab method names): the body rewrite (default on) replaces the affected tokens. With `--mzml_body_rewrite false`, S2 blocks the study, and the private report names the fields.
+6. **Public deposit report in sensitive mode.**
+   - **Built from an allow-list of fields only:** check IDs and statuses, counts (runs, files, sizes, hits as numbers), tool and validator versions, parameter *names* with non-path values, and placeholder counts.
+   - **Never included:** paths, original or raw file names, run keys (deposited names and `raw_id`s only), denylist tokens, hit contexts, sample-sheet free text, error messages or stderr.
+   - **Scanned like every other file:** the report is generated before S2, and S2 and S6 scan it. A hit blocks the study.
 
 ## 10. Containers, licences, platforms
 - **pwiz vendor-reader image:**
@@ -259,7 +273,7 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
   - Its use requires `--accept_vendor_licenses`.
   - The docs give a fallback if a digest disappears (rebuild from the pwiz Dockerfile, or `thermorawfileparser` for Thermo).
 - **Docker:** the Wine prefix is root-owned, so the module overrides the template's `-u $(id -u):$(id -g)` and chowns its outputs.
-- **Apptainer:** needs `--writable-tmpfs` or a copied `WINEPREFIX` in `$TMPDIR`. HPC support must be tested before it is promised.
+- **Apptainer:** **not supported in 1.0** (decision 2026-10-15; Docker only). Planned for a later release: needs `--writable-tmpfs` or a copied `WINEPREFIX` in `$TMPDIR`, and must be tested on the Wine image first. The `msdeposit-tools` image itself has no such constraint.
 - **`msdeposit-tools` image:** one image for the local modules. It bundles the MetaboLights validation bundle, OPA, jmzTab-m 1.0.6 and the 2.1 validator, so it works offline.
 - **MultiQC:** not used, because it would publish sample names. `DEPOSIT_REPORT` replaces it.
 
@@ -324,8 +338,11 @@ All checks emit `[study, check, status, details_private, counts_public]` and fee
 | user | — | Check steps, especially on the sensitive path | §8 (C1–C9, S1–S7) |
 | user | — | mzTab-M 2.0.0/2.1.0 as options, 2.0.0 default | `mztab_versions` (§5, §13) |
 
-## 15. Open questions for the next review
-1. Default for the optional mzML **body rewrite** in sensitive mode: off (block and report) or on?
-2. Should the launcher (`msdeposit-run`) be mandatory in sensitive mode? The pipeline can detect when `.nextflow.log` lies outside `private_outdir`.
-3. Should the public DEPOSIT_REPORT be uploaded as part of the study (e.g. under `FILES/QC/`)?
-4. Is the HPC/Apptainer support for the Wine image required for version 1.0, or is Docker-only acceptable initially?
+## 15. Decisions on the open questions (2026-10-15)
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | mzML body rewrite in sensitive mode | **On by default** (`mzml_body_rewrite true`), can be switched off; when off, studies with identifying body text are **blocked** by S2 |
+| 2 | Launcher mandatory? | **No.** In sensitive mode the pipeline enforces the important part itself: it refuses to start unless launch and work directories are inside `private_outdir` (`enforce_private_launch`). `msdeposit-run` stays an optional convenience wrapper |
+| 3 | Public deposit report in the study | **Yes, by default** (`FILES/QC/deposit_report.html`). In sensitive mode it is built from an allow-list of non-identifying fields and is scanned by S2 and S6 (§9) |
+| 4 | Platforms | **Docker only for 1.0.** Apptainer/HPC support for the Wine image in a later release |
