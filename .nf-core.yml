@@ -1,0 +1,55 @@
+repository_type: pipeline
+
+nf_core_version: 4.1.0
+
+lint:
+  files_unchanged:
+    - .prettierignore
+    - docs/CONTRIBUTING.md
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-msdeposit_logo_light.png
+    - docs/images/nf-core-msdeposit_logo_light.png
+    - docs/images/nf-core-msdeposit_logo_dark.png
+    - .github/ISSUE_TEMPLATE/bug_report.yml
+    - .github/PULL_REQUEST_TEMPLATE.md
+    - assets/email_template.txt
+    - docs/README.md
+    - assets/sendmail_template.txt
+  nextflow_config:
+    - manifest.name
+    - manifest.homePage
+  multiqc_config: false
+  files_exist:
+    - assets/email_template.html
+    - assets/sendmail_template.txt
+    - assets/email_template.txt
+    - conf/igenomes.config
+    - conf/igenomes_ignored.config
+    - CODE_OF_CONDUCT.md
+    - assets/nf-core-msdeposit_logo_light.png
+    - docs/images/nf-core-msdeposit_logo_light.png
+    - docs/images/nf-core-msdeposit_logo_dark.png
+    - .github/ISSUE_TEMPLATE/config.yml
+    - .github/workflows/awstest.yml
+    - .github/workflows/awsfulltest.yml
+    - assets/multiqc_config.yml
+
+template:
+  org: lifs-tools
+  name: msdeposit
+  description: Prepares mass spectrometry studies for MetaboLights deposition (mzML,
+    ISA-Tab, MAF, mzTab-M, mzQC) with an optional sensitive-data path (anonymised
+    mzML only, identifier checks)
+  author: Nils Hoffmann
+  version: 1.0.0dev
+  force: true
+  outdir: /tmp/claude-1000/-vol-data1-ils-clig-data/62f537e4-bd16-4c77-956d-2841fb32419b/scratchpad/scaffold/msdeposit
+  skip_features:
+    - igenomes
+    - fastqc
+    - multiqc
+    - email
+    - seqera_platform
+    - codespaces
+    - gpu
+  is_nfcore: false
