@@ -42,8 +42,7 @@ template:
     mzML only, identifier checks)
   author: Nils Hoffmann
   version: 1.0.0dev
-  force: true
-  outdir: /tmp/claude-1000/-vol-data1-ils-clig-data/62f537e4-bd16-4c77-956d-2841fb32419b/scratchpad/scaffold/msdeposit
+  outdir: .
   skip_features:
     - igenomes
     - fastqc
