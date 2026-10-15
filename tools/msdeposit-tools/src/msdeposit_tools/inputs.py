@@ -10,6 +10,7 @@ Exit 1 when any error was found (fail fast); the check files are written either 
 
 import copy
 import csv
+import os
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -438,6 +439,10 @@ def run(args) -> int:
                                 raw_files=sum(1 for r in raw_rows if r["study"] == s)),
                     summary=f"{len(e)} input errors, {len(w)} warnings",
                     details=[dict(level="error", message=m) for m in e] + [dict(level="warning", message=m) for m in w])
-    for _, level, msg in errs.items:
-        print(f"{level.upper()}: {msg}")
+    if os.environ.get("MSDEPOSIT_REDACT_ERRORS"):   # sensitive mode: messages may contain paths and names
+        print(f"{sum(lv == 'error' for _, lv, _ in errs.items)} errors, "
+              f"{sum(lv == 'warning' for _, lv, _ in errs.items)} warnings; details in check_C1.private.json")
+    else:
+        for _, level, msg in errs.items:
+            print(f"{level.upper()}: {msg}")
     return 1 if failed else 0

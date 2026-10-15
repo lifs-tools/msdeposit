@@ -8,3 +8,4 @@ testing*
 *.pyc
 null/
 .lineage/
+!tools/msdeposit-tools/src/msdeposit_tools/data/

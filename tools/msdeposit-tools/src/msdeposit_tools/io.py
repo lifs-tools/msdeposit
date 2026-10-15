@@ -51,6 +51,33 @@ def read_json(path: Path, schema: str | None = None) -> dict:
     return data
 
 
+def load_run_artefacts(paths: list[Path], schema: str) -> dict[str, dict]:
+    """{run: artefact} from files or directories; other artefacts and *.private.json are ignored."""
+    files = []
+    for p in paths:
+        files += sorted(Path(p).rglob("*.json")) if Path(p).is_dir() else [Path(p)]
+    out = {}
+    for f in files:
+        if f.name.endswith(".private.json"):
+            continue
+        d = read_json(f)
+        if not (isinstance(d, dict) and str(d.get("schema", "")).startswith(schema.rsplit("/", 1)[0] + "/")):
+            continue
+        read_json(f, schema)
+        if d["run"] in out:
+            raise InputError(f"{schema.split('/')[1]} for run '{d['run']}' given twice")
+        out[d["run"]] = d
+    return out
+
+
+def load_metadata(paths: list[Path]) -> dict[str, dict]:
+    return load_run_artefacts(paths, "msdeposit/mzml_metadata/1")
+
+
+def load_finalise(paths: list[Path]) -> dict[str, dict]:
+    return load_run_artefacts(paths, "msdeposit/finalise/1")
+
+
 def write_json(path: Path, data) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

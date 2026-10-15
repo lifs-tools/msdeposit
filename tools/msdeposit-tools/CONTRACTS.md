@@ -114,7 +114,8 @@ Inputs: `study.json`, the `metadata.json` of every run of the study, `runs.norma
 ```
 
 - `prefix` = `accession` when set, else the study key (sanitised). ISA/MAF names use it; mzML names never do.
-- `raw_path` is `""`, `raw_files[].deposited` empty and `packaging` `"none"` when `deposit_raw` is false.
+- `raw_path` is `""`, `raw_files[].deposited` empty and `packaging` `"none"` when `deposit_raw` is false
+  or the run's input `format` is not `vendor_raw` (mzML/text input: no vendor file to deposit).
   `packaging`: `copy` (file + companions, e.g. `.wiff` + `.wiff.scan`; `deposited` lists all, main file first),
   `zip` (directory format → `<name>.zip`), `none`. `raw_path` is the main deposited file of the run's raw data.
   Deposited raw names are the sanitised original names; a collision between two raw paths prefixes `<raw_id>_`.
@@ -153,8 +154,8 @@ The private JSON adds the replaced values (`old → new`) for review. `check_C4.
 |---|---|---|
 | `vendor_metadata/<raw_id>/candidates.tsv` | `vendor-metadata` | `token`, `field`, `member` — identifier candidates from metadata members only (private) |
 | `vendor_metadata/<raw_id>/method/…` | `vendor-metadata` | instrument-method dump (private) |
-| `denylist.tsv` | `identifier-denylist` | `token`, `kind` (`user`, `candidate`, `run_key`, `variant`), `case_sensitive` (bool), `origin` (private) |
-| `hits.tsv` | `identifier-scan` | `file`, `location` (`name`, `header`, `body`, `cell`), `token`, `context` (private) |
+| `denylist.tsv` | `identifier-denylist` | `token`, `kind` (`user`, `candidate`, `original_name` (original file stems and path components; run/assay keys are checked by S7 instead), `variant`), `case_sensitive` (bool), `origin` (private) |
+| `hits.tsv` | `identifier-scan` | `file`, `location` (`name`, `header`, `body`, `cell`, `text`), `token`, `context`; ≤ 20 rows per file/location/token, full counts in `check_S2.private.json` (private) |
 | `check_S1.json` … `check_S7.json` | `check-sensitive` | §9 |
 
 ## 6. Describe artefacts (per study, public)
@@ -163,8 +164,8 @@ The private JSON adds the replaced values (`old → new`) for review. `check_C4.
 |---|---|
 | `isa` | `i_Investigation.txt`, `s_<prefix>.txt`, `a_*.txt` (names from the plan) |
 | `lipid-annotate` | `lipid_annotation.tsv`: `name`, `alternative`, `goslin_name`, `goslin_level`, `formula`, `neutral_mass`, `swisslipids_name`, `swisslipids_id`, `swisslipids_level`, `note` |
-| `maf` | `m_*_maf.tsv` per assay (names from the plan) + `maf_todo.tsv` |
-| `mztab` | `<prefix>.<version>.mzTab` per selected version (`2.0.0-M` → `<prefix>.mztab-2.0.0-M.mzTab`) |
+| `maf` | `m_*_maf.tsv` per assay (names from the plan) + `maf_todo.tsv` (`maf`, `assay`, `feature`, `name`, `missing` (`;`-list of empty MAF columns), `level` (`error` for missing m/z, or RT for LC/GC/CE/SFC-MS; else `warning`), `mz_source`, `transitions`; only incomplete rows) |
+| `mztab` | `<prefix>.mztab-<version>.mzTab` per selected version (e.g. `S1.mztab-2.0.0-M.mzTab`) |
 | `mzqc` | `<prefix>.mzQC` |
 
 Describe inputs: `study.json`, `plan.json`, the `metadata.json` (public fields only) and `finalise.json` of each run
@@ -205,14 +206,25 @@ and, when there are details, `check_<ID>.private.json` with `{"details": [...]}`
 `status`: `pass`, `warn`, `fail`, `skipped`. `blocking` reflects the parameters (e.g. C6 is blocking only with
 `fail_on_validation_errors`). `counts` holds numbers only; `summary` must not contain paths or tokens.
 
-`gate` combines all check files of a study into `gate.json`
-(`{"schema": "msdeposit/gate/1", "study", "status": "passed"|"blocked", "checks": {"C1": "pass", …}, "blocking_failures": [...]}`).
+`gate` combines all check files of a study into `gate.json` (`msdeposit/gate/1`): `study`, `mode`, `status`
+(`passed`|`blocked`), `checks` ({id: worst status}), `blocking_failures`, `missing_checks`, `skipped_blocking`, `runs`
+({id: {status: n}} for per-run checks), `reasons`, `notes`, `summary`. Blocked when a blocking check failed or was
+skipped (fail closed), an expected check is missing, or (sensitive) any of S1–S5, S7 is missing, skipped or failed.
+
+Additional artefacts: `fixity.tsv` (`raw-fixity`, private: `study, raw_id, kind (file|companion|tree), member, files,
+bytes, sha256`; tree hash = SHA-256 over sorted `relpath\tsha256\n` lines) and `<raw_id>.raw_package.json`
+(`msdeposit/raw_package/1`: `files [{deposited, bytes, sha256}]`, `members`, `member_bytes`, `verified`).
+
+**Errors in sensitive mode:** with `MSDEPOSIT_REDACT_ERRORS` set (by the `sensitive` profile), the CLI prints only the
+exception type and code locations, never messages.
 
 ## 10. Validator wrappers and bundled tools
 
 External tools are looked up in `$MSDEPOSIT_TOOLS_DIR` (container: `/opt/msdeposit/tools`):
 `mtbls_validation_bundle.tar.gz` (v2.2.1), `opa` (1.21.1), `jmztabm-cli/jmztabm-cli-1.0.6.jar`,
-`mzTab_2_0-M_summary-mapping.xml`, `jmztabm-validator-amd64-linux` (2.1 dev validator). Java comes from `PATH`.
+`mzTab_2_0-M_summary-mapping.xml`, `jmztabm-validator-amd64-linux` (2.1 dev validator), optional `psi-ms.obo`
+(mzQC semantic validation; fallback: the copy shipped with psims). Java comes from `PATH`.
+The mzTab 2.0 semantic pass needs OLS (network); offline its CV lookups are folded into one `semantic_incomplete` warning.
 
 Each wrapper returns the same structure and never raises for validation findings:
 
@@ -228,3 +240,13 @@ Each wrapper returns the same structure and never raises for validation findings
 | `msdeposit_tools.validate_mtbls` | `validate(study_dir: Path) -> dict` (offline `mtbls local-validate` equivalent on the assembled set) |
 | `msdeposit_tools.validate_mztab` | `validate(path: Path, version: str) -> dict` (`2.0.0-M`: jmzTab-m 1.0.6 + mapping; `2.1.0-M`: dev validator) |
 | `msdeposit_tools.validate_mzqc` | `validate(path: Path) -> dict` (pymzqc syntax + semantic) |
+
+## 11. ISA conventions (writer `describe/isa.py`)
+
+- Assay `protocol_keys`: `<Protocol name>=<key>`, or a key starting with the protocol slug
+  (`chromatography_hilic` → Chromatography). Unmatched keys or unknown protocol names raise an input error.
+- The assay `injection_system` is written as Chromatography/CE/DI/FIA Instrument.
+- Study config keys read: `title`, `description`, `license`, `release_date`, `design_descriptors`, `factors`,
+  `protocols`, `related_studies`, `funders`, `omics_type`, `publication`/`publications`.
+- Only samples with runs are written to the sample table.
+- Validator wrapper messages may carry `file`, `column` and `values` in addition to level/rule/message.

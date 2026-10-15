@@ -8,7 +8,8 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .io import POL_TOKEN, InputError, as_bool, read_json, read_table, safe_name, write_check, write_json, write_table
+from .io import (POL_TOKEN, InputError, as_bool, load_metadata, read_json, read_table, safe_name, write_check, write_json,
+                 write_table)
 
 DATA_EXT = (".mzml", ".raw", ".d", ".wiff2", ".wiff", ".lcd", ".txt", ".gz")
 DIR_VENDORS = {"waters", "agilent", "bruker_tdf", "bruker_baf"}
@@ -33,22 +34,6 @@ def strip_data_ext(name: str) -> str:
         if ext is None:
             return name
         name = name[: -len(ext)]
-
-
-def load_metadata(paths: list[Path]) -> dict[str, dict]:
-    files = []
-    for p in paths:
-        files += sorted(p.rglob("*.json")) if p.is_dir() else [p]
-    out = {}
-    for f in files:
-        d = read_json(f)
-        if not str(d.get("schema", "")).startswith("msdeposit/mzml_metadata/"):
-            continue
-        read_json(f, "msdeposit/mzml_metadata/1")
-        if d["run"] in out:
-            raise InputError(f"metadata for run '{d['run']}' given twice")
-        out[d["run"]] = d
-    return out
 
 
 def build(study: dict, metadata: dict[str, dict], originals: dict[str, dict], naming: str, deposit_raw: bool) -> tuple:
@@ -86,7 +71,7 @@ def build(study: dict, metadata: dict[str, dict], originals: dict[str, dict], na
         orig_name = Path(orig.get("path", r["run"])).name
         planned.append(dict(
             run=r["run"], assay=r["assay"], sample=r["sample"], polarity=pol, vendor=r["vendor"],
-            raw_id=r["raw_id"], run_index=r.get("run_index"), explicit=(r.get("deposited_name") or ""),
+            raw_id=r["raw_id"], run_index=r.get("run_index"), format=r["format"], explicit=(r.get("deposited_name") or ""),
             instrument_model={"name": inst.get("model", ""), "accession": inst.get("model_accession", "")},
             nativeid_format=meta.get("nativeid_format") or {"accession": "", "name": ""},
             source_sha1=sf.get("sha1", ""), original_path=orig.get("path", ""), original_name=orig_name,
@@ -156,7 +141,8 @@ def build(study: dict, metadata: dict[str, dict], originals: dict[str, dict], na
     names_used = Counter(safe_name(ps[0]["original_name"]) for ps in by_raw.values())
     for rid in sorted(by_raw):
         ps = by_raw[rid]
-        if not deposit_raw:
+        if not deposit_raw or ps[0]["format"] != "vendor_raw":
+            # mzML or text dumps as input: there is no vendor raw file to deposit
             raw_files.append(dict(raw_id=rid, packaging="none", deposited=[]))
             raw_main[rid] = ""
             continue

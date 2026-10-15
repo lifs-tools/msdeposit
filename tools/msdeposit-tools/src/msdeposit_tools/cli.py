@@ -6,8 +6,10 @@ their subcommand is called, so a missing optional dependency affects only that s
 
 import argparse
 import importlib
+import os
 import sys
 import traceback
+from pathlib import Path
 
 from . import __version__
 from .io import InputError
@@ -57,10 +59,19 @@ def main(argv=None) -> int:
     try:
         return int(module.run(args) or 0)
     except InputError as e:
-        print(f"msdeposit-tools {name}: {e}", file=sys.stderr)
+        msg = "input error (details redacted)" if os.environ.get("MSDEPOSIT_REDACT_ERRORS") else str(e)
+        print(f"msdeposit-tools {name}: {msg}", file=sys.stderr)
         return 1
-    except Exception:
-        traceback.print_exc()
+    except Exception as e:
+        if os.environ.get("MSDEPOSIT_REDACT_ERRORS"):
+            # sensitive mode: the console may be shown or logged outside the private area, so report only the
+            # exception type and code locations, never values (paths, names) from the message
+            frames = traceback.extract_tb(e.__traceback__)
+            where = " <- ".join(f"{Path(f.filename).name}:{f.lineno}" for f in reversed(frames[-4:]))
+            print(f"msdeposit-tools {name}: internal error {type(e).__name__} at {where} (details redacted)",
+                  file=sys.stderr)
+        else:
+            traceback.print_exc()
         return 2
 
 

@@ -40,7 +40,7 @@ def test_plan_original_names(validated, tmp_path):
     assert [a["file"] for a in p["assays"]] == ["a_S1_POS.txt", "a_S1_NEG.txt"]
     assert p["runs"][0]["deposited_mzml"] == "HLB_qmf_plasma_007_01.mzML"
     assert p["runs"][0]["derived_path"] == "FILES/DERIVED_FILES/HLB_qmf_plasma_007_01.mzML"
-    assert p["raw_files"][0]["packaging"] == "copy"
+    assert p["raw_files"][0]["packaging"] == "none" and p["runs"][0]["raw_path"] == ""   # mzML input: no raw
     assert p["assays"][0]["instrument_model"]["accession"] == "MS:1001911"
     rows = list(csv.DictReader(open(out / "mapping.tsv"), delimiter="\t"))
     assert rows[0]["original_path"].startswith("/")
@@ -85,3 +85,12 @@ def test_sensitive_requires_safe_switches(validated, tmp_path):
         s["mode"] = "sensitive"
     with pytest.raises(InputError):
         run_plan(validated, tmp_path, metas_ok(), naming="original", deposit_raw="false", edit_study=sens)
+
+
+def test_plan_vendor_raw_packaging(validated, tmp_path):
+    def vendor(s):
+        for r in s["runs"]:
+            r["format"] = "vendor_raw"
+    rc, p, _ = run_plan(validated, tmp_path, metas_ok(), edit_study=vendor)
+    assert p["raw_files"][0]["packaging"] == "copy"
+    assert p["runs"][0]["raw_path"] == "FILES/RAW_FILES/HLB_qmf_plasma_007_01.mzML"
