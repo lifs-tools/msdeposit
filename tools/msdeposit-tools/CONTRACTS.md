@@ -74,16 +74,16 @@ source file names and timestamps; public writers use only the fields marked P):
 | `file_content` | P | list of `[accession, name]` of `fileContent` |
 | `instrument` | P (not `serial`) | `{"model", "model_accession", "serial", "configurations": [{"id", "components": [{"type", "order", "terms": [[acc, name]]}]}]}` |
 | `software` | P | `[{"id", "version", "terms": [[acc, name]]}]` |
-| `source_files` | – | `[{"id", "name", "location", "sha1", "format": [acc, name]}]` |
+| `source_files` | – | `[{"id", "name", "location", "sha1", "format": [acc, name], "nativeid": [acc, name]}]` |
 | `run_info` | – | `{"id", "start", "sample_ref", "default_instrument_configuration_ref"}` |
-| `counts` | P | `spectra`, `ms1`, `ms2`, `msn`, `centroid`, `profile`, `pos`, `neg`, `im_arrays` |
+| `counts` | P | `spectra`, `ms1`, `ms2`, `msn` (MS level ≥ 3), `centroid`, `profile`, `pos`, `neg`, `im_arrays` |
 | `chromatograms` | P | `n`, `srm`, `tic`, `bpc`, `sim` |
 | `polarity` | P | from spectra/chromatograms |
 | `mz_window`, `mz_window_source` | P | `[min, max]` or null |
 | `transitions` | P* | `[{"id", "q1", "q3", "polarity", "ce"}]` for SRM chromatograms (*ids may be identifying; in sensitive mode only after finalisation) |
 | `filter_strings`, `resolving_powers`, `activations`, `collision_energies`, `injection_time_mean_ms` | P | summaries |
 | `metrics` | P | run-level QC metrics (keys as in the CLIG `mzml_qc._metrics`: `rt_range_s`, `ms_run_duration_s`, `tic_auc_ms1`, `ms1_freq_fastest_hz`, …) |
-| `issues` | P | list of strings: `incomplete`, `not indexed`, `no spectra or chromatograms`, `profile spectra present`, `polarity unknown`, `checksum mismatch` |
+| `issues` | P | list of strings: `incomplete`, `not indexed`, `index invalid`, `unreadable`, `no spectra or chromatograms`, `checksum mismatch`, `polarity mismatch` (all failing), `profile spectra present`, `polarity unknown` (not failing) |
 | `status` | P | `pass` / `fail` (C2: fail when incomplete, unreadable or empty) |
 
 ## 3. `deposit-plan` (per study; C3)
@@ -145,8 +145,18 @@ Inputs: the converted mzML, `plan.json` + `--run`, `--mode rename|anonymise`, `-
 | `body_rewrites` | count of replaced tokens in ids/titles/userParams (`0` when off) |
 | `reread_ok`, `index_ok`, `checksum_ok` | verification |
 | `status` | `pass` / `fail` (C4) |
+| `study`, `timestamp_policy`, `denylist_tokens`, `ids_unique`, `issues` | |
 
-The private JSON adds the replaced values (`old → new`) for review. `check_C4.json` per run (`scope: run`).
+`header_changes` also counts `source_locations_sanitised`, `samples_renamed`, `ids_set`, `header_values_rewritten`.
+The private JSON (`msdeposit/finalise-private/1`) adds the replaced values (`old → new`) for review.
+
+- Timestamp policy `date` writes `YYYY-MM-DDT00:00:00` (a bare date is not a valid `xs:dateTime`); `drop` removes
+  the attribute. The policy applies in both modes.
+- Anonymise removes all header `userParam`s except empty/numeric ones inside `processingMethod`.
+- Body rewrite touches spectrum/chromatogram `id`/`spotID`, `spectrumRef`/`externalSpectrumID`, userParam
+  names/values and non-numeric cvParam values; numeric values and nativeID keys (`scan=`, `Q1=`, `name=`) stay.
+  When a replacement makes ids collide, C4 fails.
+- Rename mode keeps the vendor folder in directory-format locations (`file:///x.d/AcqData`). `check_C4.json` per run (`scope: run`).
 
 ## 5. Sensitive-path artefacts
 

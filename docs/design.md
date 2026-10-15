@@ -141,7 +141,7 @@ Columns: `study`, `source_name`, `sample_name`, then `characteristics:<Name>`, `
 | `mzml_body_rewrite` | – | **true** (default). When false, identifying text in spectrum/chromatogram ids, titles or userParams is not rewritten, and the affected studies are **blocked** by S2 |
 | `enforce_private_launch` | – | **true** (default): refuse to start unless the launch directory and the work directory are inside `private_outdir` (§9) |
 | `deposit_report` | true (uploaded as `FILES/QC/deposit_report.html`) | true, generated in **public-safe form** (§9) |
-| `timestamp_policy` | `keep` | `keep` / `date` / `drop`; also applies to ISA comments and mzQC |
+| `timestamp_policy` | `keep` | `keep` / `date` (`YYYY-MM-DDT00:00:00`, schema-valid) / `drop`; also applies to ISA comments and mzQC |
 | `private_outdir` | optional | **required**, ≠ `outdir`, neither nested in the other |
 | `email`, `hook_url` | allowed | must be unset |
 
