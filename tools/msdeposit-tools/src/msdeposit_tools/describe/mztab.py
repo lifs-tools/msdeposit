@@ -526,7 +526,9 @@ def run(args) -> int:
     metadata = load_metadata(args.metadata) if args.metadata else {}
     model = Model(study, plan, metadata, load_finalise(args.finalise), load_annotations(args.annotations))
     if not model.runs:
-        raise InputError("mzTab-M: no run with known polarity")
+        # no file: C7 then fails for the selected versions and the gate blocks the study with this reason
+        print("WARNING: mzTab-M not written: no run with known polarity (scan polarity is required)")
+        return 0
     args.outdir.mkdir(parents=True, exist_ok=True)
     for v in versions:
         path = args.outdir / file_name(plan["prefix"], v)

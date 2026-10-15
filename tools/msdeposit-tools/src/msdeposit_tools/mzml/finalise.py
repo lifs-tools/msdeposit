@@ -514,8 +514,12 @@ def verify(path: Path, source: Structure, stem: str, chunk: int = CHUNK) -> tupl
         issues.append("index invalid")
     if not out.checksum_ok:
         issues.append("checksum invalid")
-    if out.duplicate_ids or out.missing_ids:
-        issues.append("duplicate or missing spectrum/chromatogram ids")
+    # ids duplicated already in the input (e.g. msconvert 'SIM SIC' chromatograms) are reported, not failed;
+    # only collisions created by the rewrite fail
+    if out.duplicate_ids > source.duplicate_ids or out.missing_ids > source.missing_ids:
+        issues.append("duplicate or missing spectrum/chromatogram ids created by the rewrite")
+    elif out.duplicate_ids:
+        details.append(f"{out.duplicate_ids} duplicate spectrum/chromatogram ids already in the input (kept)")
     if not rr["ok"]:
         issues.append("re-read failed (not well-formed)")
         details.append(rr["error"])

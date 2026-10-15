@@ -9,7 +9,7 @@ process MZTAB {
     val versions
 
     output:
-    tuple val(study), path("mztab/*.mzTab"), emit: mztab
+    tuple val(study), path("mztab/*.mzTab"), emit: mztab, optional: true   // none without runs of known polarity (C7 blocks)
     tuple val("${task.process}"), val('msdeposit-tools'), eval('msdeposit-tools --version | cut -d" " -f2'), topic: versions, emit: versions_msdeposit_tools
 
     script:

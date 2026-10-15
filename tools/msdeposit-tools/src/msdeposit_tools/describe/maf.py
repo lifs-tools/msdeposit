@@ -72,9 +72,11 @@ def database_info(identifier: str) -> dict | None:
 
 
 def organism(study: dict) -> tuple[str, str]:
-    """(species, taxid) when all samples share one 'Organism' characteristic, else ('', '')."""
+    """(species, taxid) when all samples with an NCBI taxonomy organism share it, else ('', ''). Blanks and QC
+    materials without a taxonomy term (e.g. 'blank' from the MetaboLights vocabulary) are ignored."""
     found = {(c.get("value", ""), c.get("accession", "")) for s in study.get("samples", [])
-             for c in s.get("characteristics", []) if c.get("name", "").lower() == "organism" and c.get("value")}
+             for c in s.get("characteristics", []) if c.get("name", "").lower() == "organism" and c.get("value")
+             and re.search(r"NCBITaxon", (c.get("source") or "") + (c.get("accession") or ""))}
     if len(found) != 1:
         return "", ""
     value, acc = next(iter(found))

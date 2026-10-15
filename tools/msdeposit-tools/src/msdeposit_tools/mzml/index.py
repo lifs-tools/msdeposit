@@ -273,7 +273,7 @@ class IndexedWriter:
     def finish(self) -> None:
         kinds = [k for k in KINDS if self.counts[k]] or ["spectrum"]
         self.write(b"\n", scan=False)
-        offset = self.pos     # like ProteoWizard: the offset of the indentation of <indexList>
+        offset = self.pos + 2   # like ProteoWizard: the offset of the <indexList> start tag itself
         self.write(b'  <indexList count="%d">\n' % len(kinds), scan=False)
         for k in kinds:
             self.write(b'    <index name="%s">\n' % k.encode(), scan=False)

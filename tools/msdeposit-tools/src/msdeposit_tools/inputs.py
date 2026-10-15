@@ -34,7 +34,8 @@ VARIATION_TYPES = ("sd", "cv_percent", "none", "")
 SV_COLUMNS = ["study", "study_variable", "description", "average_function"]
 MEMBER_COLUMNS = ["study", "study_variable", "sample"]
 TRANSITION_COLUMNS = ["study", "assay", "transition", "q1", "q3", "polarity", "feature", "collision_energy"]
-CONTACT_COLUMNS = ["study", "first_name", "last_name", "email", "affiliation", "address", "orcid", "roles"]
+CONTACT_COLUMNS = ["study", "first_name", "last_name", "mid_initials", "email", "phone", "affiliation", "address",
+                   "affiliation_ror_id", "ror", "orcid", "roles"]
 NUMERIC = {"mz", "rt", "charge", "value", "variation", "q1", "q3", "collision_energy"}
 SAMPLE_PREFIXES = ("characteristics", "factor", "comment")
 VENDOR_RAW_EXT = (".raw", ".d", ".wiff", ".wiff2", ".lcd", ".baf", ".tdf")
@@ -350,7 +351,7 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
                 errs.error(s, f"run sheet line {line}: run_index must be a positive integer")
         comps = [c.strip() for c in (r.get("companions") or "").split(";") if c.strip()]
         comps = [paths.resolve(c) for c in comps]
-        if r["vendor"] == "sciex" and not comps and paths.exists(p):
+        if r["vendor"] == "sciex" and r["format"] == "vendor_raw" and not comps and paths.exists(p):
             comps = paths.siblings(p)
         for c in comps:
             if not paths.exists(c) and c not in paths.siblings(p):
@@ -386,10 +387,16 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
             idx = [r.get("run_index") for r in rs if r.get("run_index")]
             if len(idx) != len(set(idx)):
                 errs.error(s, "run sheet: duplicate run_index for one path")
-        rid_paths = Counter(r["raw_id"] for r in raw_rows if r["study"] == s)
-        for rid, k in rid_paths.items():
-            if k > 1:
-                errs.error(s, f"run sheet: raw_id '{rid}' used for {k} different paths")
+        # one raw id for several paths is allowed only for converted files (mzml/pwiz_text) that come from one
+        # multi-sample vendor file, i.e. with an explicit raw_id; vendor files must each have their own id
+        fmt = {(r["study"], r["path"]): r["format"] for r in runs}
+        rid_paths = defaultdict(list)
+        for x in raw_rows:
+            if x["study"] == s:
+                rid_paths[x["raw_id"]].append(x["path"])
+        for rid, ps in rid_paths.items():
+            if len(ps) > 1 and any(fmt.get((s, p_)) == "vendor_raw" for p_ in ps):
+                errs.error(s, f"run sheet: raw_id '{rid}' used for {len(ps)} different vendor paths")
 
     # assay homogeneity declared in the sheet (vendor); instrument models are checked by the plan (C3)
     for (s, a), _ in assay_def.items():
@@ -399,21 +406,24 @@ def validate(args) -> tuple[dict, list[dict], list[dict], Errors]:
 
     # sensitive mode: run and assay keys appear in logs, tags and traces and must not identify the lab
     if args.mode == "sensitive":
+        from .sensitive.denylist import Entry, Matcher, auto_case, is_generic
+        user_matcher = Matcher([Entry(t, "user", auto_case(t)) for t in user_tokens if len(t) >= 2]) if user_tokens else None
         for r in runs:
             stem = r["path"].rstrip("/").rsplit("/", 1)[-1]
             for suffix in VENDOR_RAW_EXT + (".mzml", ".txt"):
                 if stem.lower().endswith(suffix):
                     stem = stem[: -len(suffix)]
+            # matched like the identifier scan: short tokens on word boundaries; generic stems ('Blank_1') ignored
+            stem_hit = len(stem) >= 4 and not is_generic(stem) and Matcher([Entry(stem, "original_name", False)])
             for key in ("run", "assay"):
                 v = r[key]
                 if "/" in v or "\\" in v:
                     errs.error(r["study"], f"run sheet line {r['_line']}: {key} key contains a path separator")
-                if len(stem) >= 4 and (stem.lower() in v.lower() or v.lower() in stem.lower()):
+                if stem_hit and stem_hit.search(v):
                     errs.error(r["study"], f"run sheet line {r['_line']}: {key} key repeats the original file name "
                                            f"(not allowed in sensitive mode)")
-                for tok in user_tokens:
-                    if len(tok) >= 2 and tok.lower() in v.lower():
-                        errs.error(r["study"], f"run sheet line {r['_line']}: {key} key contains a denylist token")
+                if user_matcher and user_matcher.search(v):
+                    errs.error(r["study"], f"run sheet line {r['_line']}: {key} key contains a denylist token")
 
     # optional tables
     features = defaultdict(dict)
@@ -507,7 +517,8 @@ def run(args) -> int:
                     details=[dict(level="error", message=m) for m in e] + [dict(level="warning", message=m) for m in w])
     if redact_errors():   # sensitive mode: messages may contain paths and names
         print(f"{sum(lv == 'error' for _, lv, _ in errs.items)} errors, "
-              f"{sum(lv == 'warning' for _, lv, _ in errs.items)} warnings; details in check_C1.private.json")
+              f"{sum(lv == 'warning' for _, lv, _ in errs.items)} warnings; details in <study>/check_C1.private.json "
+              f"below the output directory of this step (the task work directory in the pipeline)")
     else:
         for _, level, msg in errs.items:
             print(f"{level.upper()}: {msg}")

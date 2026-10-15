@@ -7,12 +7,12 @@ process IDENTIFIER_DENYLIST {
     input:
     tuple val(study), path(candidates, stageAs: 'candidates/*'), path(metadata, stageAs: 'metadata/??/*')
     path runs_normalised
-    path user_denylist
-    path allowlist
+    path user_denylist, stageAs: 'user/*'    // staged in sub-directories: the output name must never hit an input
+    path allowlist    , stageAs: 'allow/*'
     val base_dir
 
     output:
-    tuple val(study), path("denylist.tsv"), emit: denylist
+    tuple val(study), path("out/denylist.tsv"), emit: denylist
     tuple val("${task.process}"), val('msdeposit-tools'), eval('msdeposit-tools --version | cut -d" " -f2'), topic: versions, emit: versions_msdeposit_tools
 
     script:
@@ -24,11 +24,12 @@ process IDENTIFIER_DENYLIST {
     def allow = allowlist ? "--allowlist ${allowlist}" : ''
     """
     msdeposit-tools identifier-denylist --study ${study} ${cand} ${meta_} --run-keys ${runs_normalised} --base-dir '${base_dir}' \
-        ${user} ${allow} --out denylist.tsv ${args}
+        ${user} ${allow} --out out/denylist.tsv ${args}
     """
 
     stub:
     """
-    touch denylist.tsv
+    mkdir out
+    touch out/denylist.tsv
     """
 }

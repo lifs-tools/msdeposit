@@ -257,7 +257,15 @@ def ms_values(meta: dict | None, assay: dict, profile: str) -> dict:
                                            bool((meta.get("counts") or {}).get("im_arrays")))
     else:
         analyzers = components(meta, "analyzer", first_only=True)
-        if analyzers:
+        srm_only = srm and not (meta.get("counts") or {}).get("spectra")
+        if srm_only:
+            # SRM uses the quadrupole mass filters, also on hybrid instruments (QTRAP: not the linear ion trap)
+            out["analyzer"] = ms_term("quadrupole", "MS:1000081")
+            if not analyzers:
+                out["inferred"].append("mass analyzer from SRM chromatograms")
+            elif analyzers[-1][0] != "quadrupole":
+                out["inferred"].append("mass analyzer from SRM acquisition")
+        elif analyzers:
             out["analyzer"] = ms_term(*analyzers[-1])     # last analyzer of the default configuration
         elif srm:
             out["analyzer"] = ms_term("quadrupole", "MS:1000081")

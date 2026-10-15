@@ -89,3 +89,17 @@ def test_writer_escapes_ids(tmp_path):
     res = (tmp_path / "out.mzML").read_bytes()
     assert b'idRef="a &amp; b &quot;c&quot; &lt;1&gt;"' in res
     assert index.scan(tmp_path / "out.mzML").valid
+
+
+def test_written_index_list_offset_points_at_the_tag(tmp_path):
+    """Like ProteoWizard: indexListOffset is the offset of '<indexList' itself (not of its indentation)."""
+    import re
+    from msdeposit_tools.cli import main
+    from synthetic import write_mzml
+    data = write_mzml(tmp_path / "a.mzML").read_bytes()
+    plain = data[:data.index(b"<indexedmzML")] + data[data.index(b"<mzML"):data.index(b"</mzML>") + 7] + b"\n"
+    (tmp_path / "plain.mzML").write_bytes(plain)
+    assert main(["mzml-index", "--mzml", str(tmp_path / "plain.mzML"), "--out", str(tmp_path / "out.mzML")]) == 0
+    out = (tmp_path / "out.mzML").read_bytes()
+    ilo = int(re.search(rb"<indexListOffset>(\d+)", out).group(1))
+    assert out.startswith(b"<indexList ", ilo)

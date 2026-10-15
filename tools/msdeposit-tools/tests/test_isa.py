@@ -295,3 +295,17 @@ def test_term_url(src, acc, expected):
 ])
 def test_instrument_class(analyzers, srm, im, expected):
     assert isa.instrument_class(analyzers, srm, im)[0] == expected
+
+
+def test_srm_only_runs_use_the_quadrupole(validated, tmp_path):
+    """QTRAP-like instruments list a linear ion trap last, but SRM acquisition uses the quadrupole mass filters."""
+    metas = [rich_metadata(r, p, srm=3) for r, p in (("r001", "positive"), ("r002", "positive"),
+                                                       ("r003", "negative"), ("r004", "negative"))]
+    for m in metas:
+        m["counts"] = {k: 0 for k in m["counts"]}
+        comps = m["instrument"]["configurations"][0]["components"]
+        for c in comps:
+            if c["type"] == "analyzer":
+                c["terms"] = [["MS:1000291", "linear ion trap"]]
+    out, _ = write_isa(validated, tmp_path, metas=metas)
+    assert set(column(out / "a_S1_POS.txt", "Parameter Value[Mass analyzer]")) == {"quadrupole"}

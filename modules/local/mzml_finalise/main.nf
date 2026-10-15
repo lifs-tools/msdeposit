@@ -11,7 +11,7 @@ process MZML_FINALISE {
     val body_rewrite
 
     output:
-    tuple val(meta), path("final/*.mzML")                , emit: mzml
+    tuple val(meta), path("final/*.mzML")                , emit: mzml, optional: true   // absent when C4 failed
     tuple val(meta), path("final/finalise.json")         , emit: json
     tuple val(meta), path("final/finalise.private.json") , emit: private_json
     tuple val(meta), path("final/check_C4*.json")        , emit: checks

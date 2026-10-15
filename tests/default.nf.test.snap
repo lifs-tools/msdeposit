@@ -110,10 +110,10 @@
                 "private/runs.normalised.csv"
             ],
             [
-                "HLB_qmf_plasma_007_01.mzML:md5,bf96992d497dbad0b1659ad983cb965a",
-                "HLB_qmf_plasma_007_02.mzML:md5,c658d7c08a33073147e13b7ee855ef82",
-                "HLB_qmf_plasma_007_03.mzML:md5,fbd701cacbb03010fb8abec64dba1ee7",
-                "HLB_qmf_plasma_007_04.mzML:md5,671eb6063b1ea3e7edd7da1160394527",
+                "HLB_qmf_plasma_007_01.mzML:md5,0674937a9b59072e209a5ca45bd4f69f",
+                "HLB_qmf_plasma_007_02.mzML:md5,ec866abf5329ec402f4f115102c2e89b",
+                "HLB_qmf_plasma_007_03.mzML:md5,f1b976fd7f8b3aea80dc64a21fd5f456",
+                "HLB_qmf_plasma_007_04.mzML:md5,6d56c0d7e14800c9f3f4ed7ec0de47e3",
                 "a_S1_NEG.txt:md5,480f68b9d24319f18a72da48a5473810",
                 "a_S1_POS.txt:md5,86c64400ca28a8ad739d6c7f5c1abea8",
                 "m_S1_NEG_maf.tsv:md5,661e76e161cb2a491e5777bf5b01edc1",
@@ -122,7 +122,7 @@
                 "gate_status.tsv:md5,a84447125a5306ce3a8ba8ba88e04bd3"
             ]
         ],
-        "timestamp": "2026-10-15T12:36:42.657967639",
+        "timestamp": "2026-10-15T13:59:25.162607193",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "25.10.4"

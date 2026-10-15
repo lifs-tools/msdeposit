@@ -319,6 +319,7 @@ class Builder:
     def __init__(self, allow: set[str], zipf: float | None):
         self.entries: dict[tuple[bool, str], Entry] = {}
         self.allow = allow
+        self.allow_cf = {a.casefold() for a in allow}   # harvested tokens are allowed regardless of case
         self.zipf = zipf
         self.freq = None
         self.dropped = {"generic_or_short": 0, "allowlist": 0, "frequent": 0}
@@ -346,7 +347,7 @@ class Builder:
         if not token:
             return
         cs = auto_case(token) if case_sensitive is None else case_sensitive
-        if token in self.allow or token.casefold() in {a.casefold() for a in self.allow}:
+        if token.casefold() in self.allow_cf:
             self.warnings.append("a user denylist token is also on the allowlist; the denylist wins")
         self._put(Entry(token, "user", cs, origin))
         for v in variants(token):
@@ -357,7 +358,7 @@ class Builder:
         if not harvest_ok(token, numeric_ok):
             self.dropped["generic_or_short"] += 1
             return
-        if token in self.allow:
+        if token.casefold() in self.allow_cf:
             self.dropped["allowlist"] += 1
             return
         cs = auto_case(token)
@@ -368,7 +369,7 @@ class Builder:
             cs = True       # a person name that is also a common word (e.g. 'Rook'): keep, case-sensitive
         self._put(Entry(token, kind, cs, origin))
         for v in variants(token):
-            if v not in self.allow:
+            if v.casefold() not in self.allow_cf:
                 self._put(Entry(v, "variant", cs, f"variant of {kind}"))
 
     def result(self) -> list[Entry]:
@@ -417,24 +418,35 @@ def relative_parts(path: str, base: str | None) -> list[str]:
     return parts[n:]
 
 
+def word_ok(w: str, skip: set[str]) -> bool:
+    """Word parts of original names are kept, even short lower-case ones (initials such as 'qmf'), unless they are
+    part of a deposited name or key; generic words are dropped by harvest_ok."""
+    return w.casefold() not in skip
+
+
+def deposited_words(rows: list[dict], study: str) -> set[str]:
+    """Words of sample names, run/assay keys and deposited names: deposited or checked by S7 by design."""
+    rows = [r for r in rows if not study or r.get("study") == study]
+    return {w.casefold() for r in rows for k in ("sample", "run", "assay", "deposited_name") for w in words(r.get(k, ""))}
+
+
 def add_original_names(b: Builder, rows: list[dict], study: str, base: str | None = None):
     """Original file stems and path components below the part shared with `base` (whole and split into words);
     words that are part of a sample name or of a run/assay key of the study are skipped (they are deposited or
     checked by S7 by design)."""
+    skip = deposited_words(rows, study)
     rows = [r for r in rows if not study or r.get("study") == study]
-    deposited_words = {w.casefold() for r in rows for k in ("sample", "run", "assay", "deposited_name")
-                       for w in words(r.get(k, ""))}
     for r in rows:
         paths = [r.get("path", "")] + [c for c in (r.get("companions") or "").split(";") if c]
         for p in paths:
             for comp in relative_parts(p, base):
                 b.add_harvested(comp, "original_name", "run sheet path")
                 for w in words(comp):
-                    if w.casefold() not in deposited_words:
+                    if word_ok(w, skip):
                         b.add_harvested(w, "original_name", "run sheet path")
 
 
-def add_metadata(b: Builder, path: Path):
+def add_metadata(b: Builder, path: Path, skip: set[str] = frozenset()):
     """mzml-metadata JSON (private): instrument serial and source file names/locations of the converted mzML."""
     d = read_json(path, "msdeposit/mzml_metadata/1")
     serial = (d.get("instrument") or {}).get("serial") or ""
@@ -445,7 +457,8 @@ def add_metadata(b: Builder, path: Path):
             for comp in path_tokens(v):
                 b.add_harvested(comp, "original_name", "mzML:source file")
                 for w in words(comp):
-                    b.add_harvested(w, "original_name", "mzML:source file")
+                    if word_ok(w, skip):
+                        b.add_harvested(w, "original_name", "mzML:source file")
 
 
 def find_files(paths: list[Path], name: str | None = None, pattern: str = "*") -> list[Path]:
@@ -495,11 +508,13 @@ def build(args) -> tuple[list[Entry], Builder]:
             b.add_user(r["token"], cs)
     for f in find_files(args.candidates, "candidates.tsv"):
         add_candidates(b, f)
+    run_rows = read_table(args.run_keys, ",") if args.run_keys else []
+    skip = deposited_words(run_rows, args.study)
     for f in find_files(args.metadata, pattern="*.json"):
         if str(read_json(f).get("schema", "")).startswith("msdeposit/mzml_metadata/"):
-            add_metadata(b, f)
-    if args.run_keys:
-        add_original_names(b, read_table(args.run_keys, ","), args.study, args.base_dir)
+            add_metadata(b, f, skip)
+    if run_rows:
+        add_original_names(b, run_rows, args.study, args.base_dir)
     return b.result(), b
 
 

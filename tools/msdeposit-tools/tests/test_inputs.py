@@ -67,8 +67,10 @@ def test_sensitive_run_keys(example_inputs, tmp_path):
 
 def test_sensitive_user_denylist(example_inputs, tmp_path):
     deny = tmp_path / "deny.txt"
-    deny.write_text("r00\n")
-    assert inputs.run(validate_args(example_inputs, tmp_path / "o", mode="sensitive", denylist=deny)) == 1
+    deny.write_text("r00\n")      # inside 'r001' only: no word match (the identifier scan would not match either)
+    assert inputs.run(validate_args(example_inputs, tmp_path / "o1", mode="sensitive", denylist=deny)) == 0
+    deny.write_text("POS\n")      # the assay key itself
+    assert inputs.run(validate_args(example_inputs, tmp_path / "o2", mode="sensitive", denylist=deny)) == 1
 
 
 def test_multisample_paths_need_run_index(example_inputs, tmp_path):
@@ -137,3 +139,18 @@ def test_path_facts_replace_filesystem(example_inputs, tmp_path):
     facts[rows[0]["path"]]["exists"] = False
     (tmp_path / "facts.json").write_text(json.dumps(facts))
     assert inputs.run(validate_args(example_inputs, tmp_path / "o2", path_facts=tmp_path / "facts.json")) == 1
+
+
+def test_shared_raw_id_for_converted_multisample_runs(example_inputs, tmp_path):
+    """mzML converted from one multi-sample vendor file: several paths may share an explicit raw_id."""
+    rows = list(csv.DictReader(open(example_inputs["input"])))
+    for r in rows[:2]:
+        r["raw_id"] = "S1_RAW_007"
+    with open(example_inputs["input"], "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[2]) + ["raw_id"], restval="", lineterminator="\n")
+        w.writeheader()
+        w.writerows(rows)
+    out = tmp_path / "o"
+    assert inputs.run(validate_args(example_inputs, out)) == 0
+    study = json.loads((out / "S1" / "study.json").read_text())
+    assert study["runs"][0]["raw_id"] == study["runs"][1]["raw_id"] == "S1_RAW_007"

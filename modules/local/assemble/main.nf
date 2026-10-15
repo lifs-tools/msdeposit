@@ -15,8 +15,9 @@ process ASSEMBLE {
     script:
     def r = raw ? '--raw raw' : ''
     def m = maf ? '--maf maf' : ''
+    def t = mztab ? '--mztab mztab' : ''
     """
-    msdeposit-tools assemble --plan ${plan} --isa ${isa} ${m} --mztab mztab --mzqc mzqc --mzml mzml ${r} \
+    msdeposit-tools assemble --plan ${plan} --isa ${isa} ${m} ${t} --mzqc mzqc --mzml mzml ${r} \
         --jobs ${task.cpus} --outdir assembled
     """
 

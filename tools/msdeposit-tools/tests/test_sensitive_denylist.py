@@ -174,3 +174,24 @@ def test_base_dir_components_are_not_harvested():
 def test_object_store_paths():
     from msdeposit_tools.sensitive.denylist import relative_parts
     assert relative_parts("s3://trial-in/Haldenbrook/run_01.raw", "s3://trial-in") == ["Haldenbrook", "run_01"]
+
+
+def test_short_word_parts_and_deposited_words(tmp_path):
+    rows = [dict(study="S1", run="r1", assay="A", sample="pos_s1", path="/x/HLB_pos_qmf.raw", companions="")]
+    with open(tmp_path / "runs.csv", "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    d = build(tmp_path, "--run-keys", tmp_path / "runs.csv")
+    assert "HLB" in d and "qmf" in d and "pos" not in d      # 'pos' is part of the deposited sample name
+
+
+def test_allowlist_is_case_insensitive_for_harvested(tmp_path):
+    rows = [dict(study="S1", run="r1", assay="A", sample="s1", path="/x/Haldenbrook_1.raw", companions="")]
+    with open(tmp_path / "runs.csv", "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    (tmp_path / "allow.txt").write_text("haldenbrook\n")
+    d = build(tmp_path, "--run-keys", tmp_path / "runs.csv", "--allowlist", tmp_path / "allow.txt")
+    assert "Haldenbrook" not in d

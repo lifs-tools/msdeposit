@@ -155,8 +155,9 @@ workflow MSDEPOSIT {
     //
     // ASSEMBLE (C5) and CHECK (C6-C9) on the assembled upload set
     //
+    def ch_mztab = ch_plan_ok.join(MZTAB.out.mztab, remainder: true).map { s, _p, files -> [s, files ?: []] }
     ASSEMBLE(
-        ch_plan_ok.join(ISA.out.dir).join(ch_maf).join(MZTAB.out.mztab).join(MZQC.out.mzqc)
+        ch_plan_ok.join(ISA.out.dir).join(ch_maf).join(ch_mztab).join(MZQC.out.mzqc)
             .join(ch_mzml_final).join(ch_raw_files)
     )
     CHECK(ASSEMBLE.out.upload_set.join(ch_plan_ok), cfg.mztab_versions, cfg.fail_on_validation_errors,

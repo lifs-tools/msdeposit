@@ -202,7 +202,18 @@ def test_duplicate_ids_after_rewrite_fail(tmp_path):
                                        b"Q1=760.6 Q3=184.1 sample=1 period=1 experiment=1 transition=0 name=X1")
     p = edited(tmp_path, data)
     pub, _, res = run_finalise(p, tmp_path / "o", deny=[PLANTED["transition"]])
-    assert pub["status"] == "fail" and "duplicate or missing spectrum/chromatogram ids" in pub["issues"]
+    assert pub["status"] == "fail" and "duplicate or missing spectrum/chromatogram ids created by the rewrite" in pub["issues"]
+
+
+def test_duplicate_ids_in_the_input_are_kept(tmp_path):
+    """msconvert writes duplicate 'SIM SIC' chromatogram ids for some DI-HRMS files: not a finalisation error."""
+    data = mzml_text(srm=True, plant=False).replace(
+        b"Q1=786.6 Q3=184.1 sample=1 period=1 experiment=1 transition=1 name=PC 36:2",
+        b"Q1=760.6 Q3=184.1 sample=1 period=1 experiment=1 transition=0 name=T1")
+    p = edited(tmp_path, data)
+    pub, priv, res = run_finalise(p, tmp_path / "o")
+    assert pub["status"] == "pass" and not pub["ids_unique"], pub["issues"]
+    assert any("already in the input" in d for d in priv["details"])
 
 
 def test_plain_input_and_body_source_file_refs(tmp_path):
