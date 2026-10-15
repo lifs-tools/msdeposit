@@ -40,7 +40,8 @@ workflow MSDEPOSIT {
     main:
     def mode = cfg.sensitive ? 'sensitive' : 'standard'
     def base_dir = uriOf(sheets.input.parent)   // relative run sheet paths resolve against it
-    def ch_path_facts = channel.of(groovy.json.JsonOutput.toJson(path_facts)).collectFile(name: 'path_facts.json')
+    // a value channel: VALIDATE_INPUTS outputs (runs.normalised.csv) must be value channels, read once per study
+    def ch_path_facts = channel.of(groovy.json.JsonOutput.toJson(path_facts)).collectFile(name: 'path_facts.json').first()
 
     //
     // PREPARE: validate the inputs (C1) and build the run channel from the normalised run sheet

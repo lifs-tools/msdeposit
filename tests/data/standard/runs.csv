@@ -3,3 +3,7 @@ S1,r001,POS,QC_01,mzml,data/HLB_qmf_plasma_007_01.mzML,thermo,positive
 S1,r002,POS,P1_A,mzml,data/HLB_qmf_plasma_007_02.mzML,thermo,positive
 S1,r003,NEG,QC_01,mzml,data/HLB_qmf_plasma_007_03.mzML,thermo,negative
 S1,r004,NEG,P1_A,mzml,data/HLB_qmf_plasma_007_04.mzML,thermo,negative
+S2,r001,POS,QC_01,mzml,data/HLB_qmf_plasma_007_01.mzML,thermo,positive
+S2,r002,POS,P1_A,mzml,data/HLB_qmf_plasma_007_02.mzML,thermo,positive
+S2,r003,NEG,QC_01,mzml,data/HLB_qmf_plasma_007_03.mzML,thermo,negative
+S2,r004,NEG,P1_A,mzml,data/HLB_qmf_plasma_007_04.mzML,thermo,negative

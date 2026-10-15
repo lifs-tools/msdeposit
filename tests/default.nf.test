@@ -17,10 +17,12 @@ nextflow_pipeline {
             def stable_path = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}', 'private/pipeline_info/*'])
             // stable_content: files whose content does not depend on the date or the run
             def stable_content = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
-            def gate = new groovy.json.JsonSlurper().parse(file("$outputDir/private/S1/gate.json"))
+            // two studies: every per-study step must run for each of them
+            def gates = ['S1', 'S2'].collect { s -> new groovy.json.JsonSlurper().parse(file("$outputDir/private/${s}/gate.json")) }
             assert workflow.success
             assertAll(
-                { assert gate.status == 'passed' },
+                { assert gates.every { g -> g.status == 'passed' } },
+                { assert file("$outputDir/S1/i_Investigation.txt").exists() && file("$outputDir/S2/i_Investigation.txt").exists() },
                 { assert snapshot(
                     removeNextflowVersion("$outputDir/pipeline_info/msdeposit_software_versions.yml"),
                     stable_path,
