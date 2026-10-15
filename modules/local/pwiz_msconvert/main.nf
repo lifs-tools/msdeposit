@@ -24,7 +24,7 @@ process PWIZ_MSCONVERT {
     # the Wine prefix is root-owned, so the container runs as root: hand the outputs back to the task owner
     sed -n 's/.*<software id="pwiz" version="\\([^"]*\\)".*/\\1/p' ${meta.conv}.mzML 2>/dev/null | head -n 1 > pwiz_version.txt || true
     chown -R --reference=. . 2>/dev/null || true
-    exit \$rc
+    if [ \$rc -ne 0 ]; then exit \$rc; fi
     """
 
     stub:
