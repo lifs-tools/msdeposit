@@ -34,6 +34,7 @@ Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-c
 - ThermoRawFileParser output is re-indexed by `MZML_INDEX`: its index offsets point at the indentation before each
   element, so C2 failed it as "index invalid" and blocked every study with Thermo runs.
 - Test profiles fit GitHub runners (2 CPUs, 6 GB); `test_mtbls` marks its Thermo run as `vendor=thermo`.
+- Publishing the private check files works on Nextflow 26.10 (a publish `>>` inside a nested closure failed there).
 
 ### `Dependencies`
 
