@@ -49,6 +49,12 @@ flowchart LR
   docker build -t ghcr.io/lifs-tools/msdeposit-tools:0.1.0 tools/msdeposit-tools
   ```
 
+  While the package on ghcr.io is private, log in before running the pipeline, with a GitHub token that has the `read:packages` scope and access to `lifs-tools` (Apptainer reads the `APPTAINER_DOCKER_USERNAME` and `APPTAINER_DOCKER_PASSWORD` variables instead):
+
+  ```bash
+  echo "$GITHUB_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+  ```
+
 - **Vendor converter:**
   - **Thermo rows need `vendor` set to `thermo`:** `--thermo_converter thermorawfileparser` only applies to rows with that value. A `.raw` file without a vendor could also be Waters, so it goes to ProteoWizard.
   - **Licences:** vendor files other than Thermo `.raw` are converted with the ProteoWizard image, which bundles the vendor reader libraries. Read the [ProteoWizard licences](https://proteowizard.sourceforge.io/licenses.html) and pass `--accept_vendor_licenses`.
