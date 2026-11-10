@@ -3,7 +3,7 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v1.0.0dev - [unreleased]
+## v0.1.0 - [2026-11-10]
 
 Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-co.re/) template.
 
@@ -25,6 +25,8 @@ Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-c
   verified by `tests/data/mtbls/fetch.sh`; its nf-test scans the public output for identifiers known to be in the
   original files. CI builds the `msdeposit-tools` image and caches the test data.
 - `docs/submission.md`: step-by-step guide to conversion, pseudonymisation, hit review and post-hoc verification.
+- `msdeposit-tools` image published to `ghcr.io/lifs-tools/msdeposit-tools` by the "Publish the msdeposit-tools
+  image" workflow (`dev` from the dev branch, the version tag on releases); the modules use the version tag.
 
 ### `Fixed`
 
@@ -35,6 +37,7 @@ Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-c
   element, so C2 failed it as "index invalid" and blocked every study with Thermo runs.
 - Test profiles fit GitHub runners (2 CPUs, 6 GB); `test_mtbls` marks its Thermo run as `vendor=thermo`.
 - Publishing the private check files works on Nextflow 26.10 (a publish `>>` inside a nested closure failed there).
+- Singularity CI jobs test the image built from the checkout (converted into the Nextflow image cache).
 
 ### `Dependencies`
 

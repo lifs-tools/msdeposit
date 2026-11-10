@@ -2,7 +2,7 @@ process ISA {
     tag "${study}"
     label 'process_single'
     label 'msdeposit_tools'
-    container 'ghcr.io/lifs-tools/msdeposit-tools:dev'
+    container 'ghcr.io/lifs-tools/msdeposit-tools:0.1.0'
 
     input:
     tuple val(study), path(study_json), path(plan), path(metadata, stageAs: 'metadata/??/*'), path(finalise, stageAs: 'finalise/??/*')

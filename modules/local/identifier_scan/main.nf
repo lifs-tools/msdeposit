@@ -2,7 +2,7 @@ process IDENTIFIER_SCAN {
     tag "${study}"
     label 'process_medium'
     label 'msdeposit_tools'
-    container 'ghcr.io/lifs-tools/msdeposit-tools:dev'
+    container 'ghcr.io/lifs-tools/msdeposit-tools:0.1.0'
 
     input:
     tuple val(study), path(upload_set), path(denylist)

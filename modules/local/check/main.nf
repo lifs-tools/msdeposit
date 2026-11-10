@@ -2,7 +2,7 @@ process CHECK {
     tag "${study}"
     label 'process_low'
     label 'msdeposit_tools'
-    container 'ghcr.io/lifs-tools/msdeposit-tools:dev'
+    container 'ghcr.io/lifs-tools/msdeposit-tools:0.1.0'
 
     input:
     tuple val(study), path(upload_set), path(plan)

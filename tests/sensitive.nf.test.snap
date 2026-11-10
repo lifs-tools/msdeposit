@@ -3,61 +3,61 @@
         "content": [
             {
                 "ASSEMBLE": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "ASSEMBLE_REPORT": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "CHECK": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "CHECK_SENSITIVE": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "DEPOSIT_PLAN": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "DEPOSIT_REPORT_PRIVATE": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "DEPOSIT_REPORT_PUBLIC": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "GATE": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "IDENTIFIER_DENYLIST": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "IDENTIFIER_SCAN": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "ISA": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "MAF": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "MZML_FINALISE": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "MZML_INDEX": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "MZML_METADATA": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "MZQC": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "MZTAB": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "VALIDATE_INPUTS": {
-                    "msdeposit-tools": "0.1.0.dev0"
+                    "msdeposit-tools": "0.1.0"
                 },
                 "Workflow": {
-                    "lifs-tools/msdeposit": "v1.0.0dev"
+                    "lifs-tools/msdeposit": "v0.1.0"
                 }
             },
             [

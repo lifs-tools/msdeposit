@@ -2,7 +2,7 @@ process PUBLISH_UPLOAD_SET {
     tag "${study}"
     label 'process_single'
     label 'msdeposit_tools'
-    container 'ghcr.io/lifs-tools/msdeposit-tools:dev'
+    container 'ghcr.io/lifs-tools/msdeposit-tools:0.1.0'
 
     // The only public output of the pipeline: the upload set of a study that passed the gate (design §9).
     // Everything else is published below private_outdir by the workflow output block in main.nf.
