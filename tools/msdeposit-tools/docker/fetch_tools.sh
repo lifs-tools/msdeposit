@@ -34,7 +34,7 @@ MZTAB_MAPPING_SHA256=${MZTAB_MAPPING_SHA256:-6068bc77c22037914f9ff99d4d716d4f79a
 # the checksum pins the build tested with msdeposit; when upstream replaces it, the download fails the checksum and
 # the build needs the tested binary in docker/tools/ or a new JMZTABM_VALIDATOR_SHA256.
 JMZTABM_VALIDATOR_URL=${JMZTABM_VALIDATOR_URL:-https://github.com/lifs-tools/jmzTab-m/releases/download/dev-latest/jmztabm-validator-amd64-linux}
-JMZTABM_VALIDATOR_SHA256=${JMZTABM_VALIDATOR_SHA256:-29a66cb58916f4ad98ca470b25f0d83aece1c25f57daefb469b05ec229a365c3}
+JMZTABM_VALIDATOR_SHA256=${JMZTABM_VALIDATOR_SHA256:-d73690bf98f8542a100b319e9181158d87ff03977a89de447d284c302764da52}
 
 mkdir -p "$DEST"
 

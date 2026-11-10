@@ -19,6 +19,11 @@ lint:
     - manifest.name
     - manifest.homePage
   multiqc_config: false
+  # not an nf-core pipeline: nf-core/configs has no pipeline/msdeposit.config to include
+  included_configs: false
+  # real-data test with explicit assertions instead of a snapshot (see tests/data/mtbls/README.md)
+  nf_test_content:
+    - tests/mtbls.nf.test
   files_exist:
     - assets/email_template.html
     - assets/sendmail_template.txt

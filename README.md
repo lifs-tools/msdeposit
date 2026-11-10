@@ -70,13 +70,13 @@ Submission to MetaboLights is deliberately **not** part of the pipeline. Review 
 
 Describe your study in a few CSV files and one YAML file (all columns are explained in [docs/usage.md](docs/usage.md)):
 
-| Input | Content |
-| --- | --- |
-| `--input` | **Run sheet**: one row per run, i.e. per resulting mzML. Columns `study`, `run`, `assay`, `sample`, `format` (`vendor_raw`/`mzml`/`pwiz_text`) and `path` |
-| `--assays` | One row per assay (one ISA assay file): technique, polarity, chromatography, protocols |
-| `--samples` | ISA samples with characteristics, factors and comments |
-| `--studies` | Studies YAML: title, description, licence, release date, design descriptors, factors, protocols |
-| optional | contacts, publication, protocol texts, reported features and values, study variables, SRM transitions, identifier deny/allow lists |
+| Input       | Content                                                                                                                                                   |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--input`   | **Run sheet**: one row per run, i.e. per resulting mzML. Columns `study`, `run`, `assay`, `sample`, `format` (`vendor_raw`/`mzml`/`pwiz_text`) and `path` |
+| `--assays`  | One row per assay (one ISA assay file): technique, polarity, chromatography, protocols                                                                    |
+| `--samples` | ISA samples with characteristics, factors and comments                                                                                                    |
+| `--studies` | Studies YAML: title, description, licence, release date, design descriptors, factors, protocols                                                           |
+| optional    | contacts, publication, protocol texts, reported features and values, study variables, SRM transitions, identifier deny/allow lists                        |
 
 Standard deposition (raw files and mzML):
 

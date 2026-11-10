@@ -57,9 +57,9 @@ runs:
         conda-remove-defaults: true
 
     # The modules use ghcr.io/lifs-tools/msdeposit-tools:dev; until it is published, build it from this checkout
-    # (docker uses a local image of that name instead of pulling it)
+    # (docker uses a local image of that name instead of pulling it). Built for every profile: the pipeline tests
+    # name `docker` in their own profile, so the conda jobs run the containers too.
     - name: Build the msdeposit-tools image
-      if: contains(inputs.profile, 'docker')
       shell: bash
       run: docker build -t ghcr.io/lifs-tools/msdeposit-tools:dev tools/msdeposit-tools
 

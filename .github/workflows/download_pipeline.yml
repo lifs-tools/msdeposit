@@ -35,7 +35,8 @@ jobs:
           echo "REPO_BRANCH=${{ github.event.inputs.testbranch || 'dev' }}" >> "$GITHUB_OUTPUT"
 
   download:
-    runs-on: ubuntu-latest
+    # setup-apptainer installs a .deb that needs libfuse3-3, which Ubuntu 26.04 (ubuntu-latest) no longer has
+    runs-on: ubuntu-24.04
     needs: configure
     steps:
       - name: Check out pipeline code
