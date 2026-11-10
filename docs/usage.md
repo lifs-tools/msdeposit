@@ -299,7 +299,7 @@ Specify the pipeline version with `-r`, for example `-r 0.1.0`. The containers a
 
 ### `-profile`
 
-Use `docker`; it is the only container engine supported in 1.0. Apptainer is planned for a later release (the Wine-based ProteoWizard image needs a writable prefix). Combine `docker` with `test` or `test_sensitive` for the tests, and with institutional profiles from [nf-core/configs](https://github.com/nf-core/configs) for your infrastructure.
+Use `docker`; it is the only container engine supported in 0.1.0. Conda and mamba are not supported: the pipeline stops if `-profile conda` or `mamba` is given. Apptainer is planned for a later release (the Wine-based ProteoWizard image needs a writable prefix). Combine `docker` with `test` or `test_sensitive` for the tests, and with institutional profiles from [nf-core/configs](https://github.com/nf-core/configs) for your infrastructure.
 
 ### `-resume`
 
