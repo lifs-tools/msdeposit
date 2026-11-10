@@ -1,0 +1,3 @@
+study,assay,technique,polarity,acquisition,column_model,column_type,injection_system,measurement_type,protocol_keys
+SRM,NEG,LC-MS,alternating,SRM,Ascentis Express C18 2.7 um 2.1 x 150 mm,reverse phase,UltiMate 3000 UHPLC,targeted,extraction;chromatography
+DIA,NEG,LC-MS,negative,DIA,Ascentis Express C18 2.7 um 2.1 x 150 mm,reverse phase,UltiMate 3000 UHPLC,untargeted,extraction;chromatography

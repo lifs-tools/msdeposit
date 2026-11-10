@@ -1,0 +1,5 @@
+study,source_name,sample_name,characteristics:Organism,characteristics:Organism::source,characteristics:Organism::accession,characteristics:Organism part,factor:Sample material,comment:Sequence position
+S1,NIST SRM 1950,QC_01,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood plasma,NIST SRM 1950,1
+S1,Plasma 1,P1_A,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood plasma,Plasma 1,2
+S2,NIST SRM 1950,QC_01,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood plasma,NIST SRM 1950,1
+S2,Plasma 1,P1_A,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood plasma,Plasma 1,2

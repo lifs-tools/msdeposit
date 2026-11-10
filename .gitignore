@@ -1,6 +1,6 @@
 .nextflow*
 work/
-data/
+/data/
 results/
 .DS_Store
 testing/
@@ -8,3 +8,8 @@ testing*
 *.pyc
 null/
 .lineage/
+!tools/msdeposit-tools/src/msdeposit_tools/data/
+.nf-test/
+tools/msdeposit-tools/.venv/
+.nf-test.log
+tests/data/mtbls/data/

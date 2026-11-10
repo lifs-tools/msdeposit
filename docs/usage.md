@@ -1,100 +1,288 @@
 # lifs-tools/msdeposit: Usage
 
-> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+> _Documentation of pipeline parameters is generated automatically from the pipeline schema (`nextflow run lifs-tools/msdeposit --help`, or the parameter page of the pipeline). This page explains the inputs, the two modes and how to run the pipeline._
 
 ## Introduction
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+For a step-by-step walkthrough of a deposition, see [Preparing a submission](submission.md).
 
-## Samplesheet input
+msdeposit turns mass spectrometry runs plus study metadata into upload sets for [MetaboLights](https://www.ebi.ac.uk/metabolights/), one per study. A **study** becomes one MetaboLights study, and an **assay** becomes one ISA assay file. An assay groups the runs that share technique, polarity and instrument.
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+You describe the study in a few tables, the _input contract_. The pipeline never reads lab-specific templates or sample lists itself. If your raw information comes in another form, such as lab sequence templates, write a small **study adapter** that produces the tables; see [Study adapters](#study-adapters). The synthetic test data in [`tests/data/standard`](../tests/data/standard) is a complete minimal example, and [`tests/data/sensitive`](../tests/data/sensitive) is the same study for sensitive mode.
+
+## Inputs
+
+All tables are CSV files with a header row. Empty cells mean "not given". Study, run and assay **keys** may only contain `A-Z a-z 0-9 . _ -` (at most 64 characters), because they appear in file names, process tags and commands.
+
+### Run sheet (`--input`)
+
+One row per **run**, that is, per resulting mzML file.
+
+```csv title="runs.csv"
+study,run,assay,sample,format,path,vendor,polarity
+S1,r001,POS,QC_01,vendor_raw,raw/QC_01_pos.raw,,
+S1,r002,POS,P1_A,vendor_raw,raw/P1_A_pos.raw,,
+S1,r003,NEG,QC_01,mzml,converted/QC_01_neg.mzML,thermo,negative
+```
+
+| Column           | Required               | Description                                                                                                                                                              |
+| ---------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `study`          | yes                    | study key (defined in `--studies`)                                                                                                                                       |
+| `run`            | yes                    | run key, unique per study. **Sensitive mode:** it must not identify the lab or repeat the original file name (checked), because run keys appear in logs and process tags |
+| `assay`          | yes                    | assay key (defined in `--assays`)                                                                                                                                        |
+| `sample`         | yes                    | ISA Sample Name (defined in `--samples`)                                                                                                                                 |
+| `format`         | yes                    | `vendor_raw` (vendor file or directory), `mzml`, or `pwiz_text` (ProteoWizard text dump)                                                                                 |
+| `path`           | yes                    | the file or directory. Relative paths resolve against the run sheet's own directory; absolute paths and object-store URIs (`s3://…`) are allowed                         |
+| `vendor`         | for `mzml`/`pwiz_text` | `thermo`, `sciex`, `agilent`, `bruker_tdf`, `bruker_baf`, `waters`, `shimadzu`; detected automatically for `vendor_raw`                                                  |
+| `companions`     | no                     | `;`-separated extra files needed with the run. For SCIEX, `<name>.wiff.scan` files are found automatically                                                               |
+| `run_index`      | no                     | 1-based sample index inside a multi-sample file (SCIEX `.wiff`). Several rows then share one `path`                                                                      |
+| `polarity`       | no                     | expected polarity (`positive`, `negative`, `alternating`); checked against the mzML                                                                                      |
+| `deposited_name` | no                     | deposited mzML file stem (overrides the naming rule)                                                                                                                     |
+| `raw_id`         | no                     | public identifier of the raw file. Default `<study>_RAW_<nnn>`, numbered by sorted path                                                                                  |
+
+### Assays (`--assays`)
+
+One row per assay, i.e. per ISA assay file `a_<study or accession>_<assay>.txt`. All runs of an assay must share vendor, instrument model and polarity (checked).
+
+```csv title="assays.csv"
+study,assay,technique,polarity,acquisition,column_model,column_type,injection_system,measurement_type,instrument_fallback,protocol_keys
+S1,POS,LC-MS,positive,,Acquity UPLC BEH C18 100 x 2.1 mm,reverse phase,Vanquish UHPLC,targeted,,extraction;chromatography
+```
+
+| Column                        | Description                                                                                                |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `technique`                   | `LC-MS`, `DI-MS`, `FIA-MS`, `GC-MS`, `CE-MS`, `MALDI-MS` (an ISA assay template must exist)                |
+| `polarity`                    | expected polarity of all runs                                                                              |
+| `acquisition`                 | e.g. `DDA`, `DIA`, `SRM`; it becomes an assay descriptor and, with neutral naming, part of the file name   |
+| `column_model`, `column_type` | chromatography column; `column_type` uses the MetaboLights controlled values (`reverse phase`, `HILIC`, …) |
+| `injection_system`            | written as the Chromatography, DI or FIA instrument                                                        |
+| `measurement_type`            | `targeted`, `untargeted`, …                                                                                |
+| `instrument_fallback`         | instrument name used when the mzML does not name the model (marked as inferred)                            |
+| `protocol_keys`               | `;`-separated keys of protocol texts, see [Protocols](#protocols-protocols)                                |
+
+### Samples (`--samples`)
+
+One row per ISA sample. ISA headers are encoded in the column names, so the table stays a plain CSV:
+
+| Column                                | ISA header                                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `study`, `source_name`, `sample_name` | Source Name, Sample Name                                                                                      |
+| `characteristics:<Name>`              | `Characteristics[<Name>]`; add `::source` and `::accession` columns for the ontology term, `::unit` for units |
+| `factor:<Name>`                       | `Factor Value[<Name>]` (+ `::source`, `::accession`, `::unit`)                                                |
+| `comment:<Name>`                      | `Comment[<Name>]`                                                                                             |
+
+```csv title="samples.csv"
+study,source_name,sample_name,characteristics:Organism,characteristics:Organism::source,characteristics:Organism::accession,characteristics:Organism part,factor:Sample material,comment:Sequence position
+S1,NIST SRM 1950,QC_01,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood plasma,NIST SRM 1950,1
+```
+
+The MetaboLights sample template defines Organism, Organism part, Variant, Sample type, Disease and Cell type. Characteristics you do not give are written empty, never invented. Check C9 lists them.
+
+### Studies (`--studies`)
+
+A YAML file with an optional `defaults` block, deep-merged into every study, and one entry per study key:
+
+```yaml title="studies.yml"
+defaults:
+  license: CC BY 4.0
+  release_date: "2027-01-15"
+  omics_type: lipidomics
+  design_descriptors:
+    - { term: lipidomics, source: EFO, accession: http://www.ebi.ac.uk/efo/EFO_0010333 }
+  protocols:
+    Extraction: extraction_folch # protocol name -> text key (see --protocols)
+studies:
+  S1:
+    title: Interlaboratory lipid quantification in human plasma, method 1
+    description: Long description, at least 150 characters for MetaboLights ...
+    accession: MTBLS1234 # optional; ISA/MAF file names use it once known
+    factors:
+      - { name: Sample material, type: { term: material, source: EFO, accession: ... } }
+    related_studies: [MTBLS1235]
+    funders:
+      - { name: Example Foundation, ror_id: https://ror.org/..., grant_ids: [G-1] }
+```
+
+Terms can be written as a string, as `[term, source, accession]`, or as `{term, source, accession}`.
+
+### Optional inputs
+
+| Parameter                  | Content                                                                                                                                                                                                                                                                           |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--contacts`               | CSV: `study` (empty = all studies), `first_name`, `last_name`, `email`, `affiliation`, `address`, `orcid`, `roles` (`;`-separated, e.g. `Principal Investigator;Submitter`)                                                                                                       |
+| `--publication`            | YAML with `title`, `doi`, `pubmed_id`, `authors` (list or string), `status`                                                                                                                                                                                                       |
+| `--protocols`              | Directory of protocol texts, see below                                                                                                                                                                                                                                            |
+| `--features`               | Reported features (CSV): `study`, `assay` (empty = all assays), `feature`, `name`, `level`, `formula`, `mz`, `rt`, `adduct`, `charge`, `database_id`, `quantifier`                                                                                                                |
+| `--values`                 | Reported values (CSV): `study`, `feature`, either `run` (one value per run) or `study_variable` (aggregate), `value`, `unit` (UO accession, e.g. `UO:0000064`), `variation`, `variation_type` (`sd`, `cv_percent`, `none`). A variation is written only when its type is declared |
+| `--study_variables`        | CSV: `study`, `study_variable`, `description`, `average_function`                                                                                                                                                                                                                 |
+| `--study_variable_members` | CSV: `study`, `study_variable`, `sample` (one row per member sample)                                                                                                                                                                                                              |
+| `--transitions`            | SRM transitions (CSV): `study`, `assay`, `transition`, `q1`, `q3`, `polarity`, `feature`, `collision_energy`. Only needed when the mzML does not name its transitions or names them in a way that cannot be matched to features                                                   |
+| `--denylist`               | Additional identifier tokens, one per line (or TSV with a `token` column). They are never filtered                                                                                                                                                                                |
+| `--allowlist`              | Tokens that may appear although they were harvested as identifier candidates                                                                                                                                                                                                      |
+
+### Protocols (`--protocols`)
+
+A directory of Markdown text blocks: `<key>.md` applies to all studies, and `<study>/<key>.md` applies to one study and takes precedence. A protocol gets the keys given for it in the studies YAML (`protocols: {<Protocol name>: key}`) and the assay `protocol_keys` that belong to it. Keys are matched by `<Protocol name>=<key>`, or by keys starting with the protocol slug (`chromatography_hilic` → Chromatography). Without a key, the slug is used (`extraction.md`, `chromatography.md`, …).
+
+Texts that are not found become `[[TODO-PROTOCOL:<key>]]` placeholders. The mass spectrometry, chromatography and data transformation protocols are drafted from the mzML metadata and marked as drafts. Check C9 counts all remaining placeholders.
+
+## Modes
+
+### Standard mode (default)
+
+Deposits the vendor raw files (directory formats such as Agilent/Bruker `.d` and Waters `.raw` as ZIP64 archives) and the converted mzML. Deposited mzML names are the sanitised original file stems (`--deposited_naming original`).
+
+`--identifier_scan` adds the identifier denylist and scan (S1, S2) to a standard-mode run as an audit. Hits block the study. Since standard mode does not anonymise, use `--denylist`/`--allowlist` to define what must not appear.
+
+### Sensitive mode (`--sensitive_data`)
+
+For ring trials and other multi-site studies, where file headers and vendor metadata reveal who measured the data: user and computer names, paths, instrument serial numbers, lab codes, and time zones.
+
+`--sensitive_data` is a **preset**. It sets the switches below and rejects contradicting settings instead of overriding them silently:
+
+| Switch                     | Standard default   | Sensitive preset                                                                   |
+| -------------------------- | ------------------ | ---------------------------------------------------------------------------------- |
+| `--deposit_raw`            | true               | false (required): raw files stay with the study coordination                       |
+| `--finalise_mode`          | `rename`           | `anonymise` (required)                                                             |
+| `--deposited_naming`       | `original`         | `neutral` (required): `<sample>_<POL>[_<acquisition>]`                             |
+| `--identifier_scan`        | false              | true (required)                                                                    |
+| `--mzml_body_rewrite`      | –                  | true. When false, identifying spectrum or chromatogram identifiers block the study |
+| `--enforce_private_launch` | false              | true                                                                               |
+| `--private_outdir`         | `<outdir>/private` | required, and neither nested in `--outdir` nor the other way round                 |
+
+What the sensitive path does:
+
+1. **Denylist per study.** It is built from the vendor metadata (Thermo headers and methods, Bruker `GlobalMetadata`, Waters `_HEADER.TXT`/`_extern.inf`/`_inlet.inf`, Agilent `AcqData` XML, SCIEX headers), the mzML metadata, the original file and folder names (below the run sheet's directory), and your `--denylist`. Transliteration variants (ü→ue) are added.
+2. **Anonymised mzML.** The header loses serial numbers, contacts, free-text user parameters and source file paths; sample and run identifiers are set to the deposited names; timestamps follow `--timestamp_policy`. Denylist tokens in spectrum and chromatogram identifiers, titles and user parameters are replaced by neutral placeholders. Binary data is verified to be unchanged.
+3. **Checks S1–S7.** These are listed in [output.md](output.md#checks). Any failure blocks the study, and nothing of it reaches `--outdir`.
+4. **Leak boundary.**
+   - Nextflow reports, the parameter file, mappings, check details, the denylist and the scan hits go to `--private_outdir`.
+   - Tool errors are printed without values.
+   - The **private-launch guard** refuses to start unless the launch directory and the work directory are inside `--private_outdir`, because Nextflow keeps `.nextflow.log`, its command history and `work/` there.
 
 ```bash
---input '[path to samplesheet file]'
+mkdir -p /secure/trial/private/run && cd /secure/trial/private/run
+nextflow run lifs-tools/msdeposit -profile docker -w /secure/trial/private/work \
+   --sensitive_data --private_outdir /secure/trial/private --outdir /secure/trial/public \
+   --input runs.csv --assays assays.csv --samples samples.csv --studies studies.yml \
+   --denylist lab_identifiers.txt --accept_vendor_licenses
 ```
 
-### Multiple runs of the same sample
+Keep the console output private too: run inside `tmux`/`screen` on the secure host, or redirect it into the private directory.
 
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
+## Conversion
 
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
+- **ProteoWizard image.** Vendor files are converted with the ProteoWizard `msconvert` image, which includes the vendor reader libraries:
+  - pulled by digest;
+  - runs under Wine as root inside the container, with its outputs handed back to your user;
+  - its use requires **`--accept_vendor_licenses`** (see the [ProteoWizard licences](https://proteowizard.sourceforge.io/licenses.html)).
+- **Default `msconvert` options:**
+  - centroiding by vendor peak picking for all MS levels, zlib compression and 64-bit arrays;
+  - Waters: lock-mass scans dropped;
+  - Agilent and Bruker timsTOF: ion-mobility frames combined.
+  - Override them per vendor in a custom config via `ext.args` of `PWIZ_MSCONVERT`.
+- **Thermo without Wine.** `--thermo_converter thermorawfileparser` converts Thermo `.raw` files with ThermoRawFileParser instead.
+- **Already converted data.** mzML from elsewhere can be given with `format=mzml` and the original `vendor`; it is re-indexed and checksummed. Raw files are then not deposited.
+
+Conversion is slow for some instruments (Agilent ion-mobility files can take hours each). `PWIZ_MSCONVERT` runs at most 8 tasks in parallel and retries with longer time limits. Use `-resume` after interruptions; finished conversions are reused.
+
+## Results and QC files
+
+- **MAF:** one per assay (`--maf`, on by default). It holds m/z, retention time, formula, identifiers and per-run abundances from `--features`/`--values`. MetaboLights requires m/z and, for chromatography, retention times; missing values are left empty and listed by C9 and in `maf_todo.tsv`.
+- **mzTab-M:** `--mztab_versions 2.0.0-M` (default), `2.1.0-M`, or `2.0.0-M,2.1.0-M` for both. One summary file per study, with study variables from `--study_variables`.
+- **mzQC:** run-level metrics of every deposited mzML.
+- **Lipid annotation** (`--lipid_annotation goslin|goslin+swisslipids`):
+  - Goslin normalises lipid names and adds formula and mass.
+  - SwissLipids identifiers are looked up by exact name only, from `--swisslipids_cache` or, with `--allow_network`, online.
+
+## Checks and the gate
+
+Every check result goes into the private output. Blocking checks decide whether a study is published:
+
+- **Always blocking:** C1–C5, and S1–S7 in sensitive mode.
+- **Optionally blocking:**
+  - validator errors (C6–C8) with `--fail_on_validation_errors`;
+  - remaining placeholders and empty required fields (C9) with `--fail_on_todo_placeholders`. Use this for the final, submission-ready run.
+
+A blocking check that could not run, for example because a validator is missing, blocks too. When a study is blocked, the run finishes all other studies and then exits with an error. See [output.md](output.md#checks).
+
+## Accession numbers
+
+Once MetaboLights has assigned an accession, add `accession: MTBLS…` to the study in `--studies` and re-run with `-resume`. Only the description steps onwards are recomputed: ISA and MAF file names contain the accession, but mzML names never do.
+
+## Object stores (S3)
+
+Inputs, `--outdir` and `--private_outdir` may be S3 or S3-compatible URIs (`s3://bucket/prefix`), for example de.NBI object storage or MinIO. Performance is lower, because every task downloads its inputs.
+
+```groovy title="s3.config (passed with -c)"
+aws {
+    accessKey = '...'
+    secretKey = '...'
+    region    = 'us-east-1'
+    client {
+        endpoint          = 'https://objectstore.example.org'   // S3-compatible endpoint
+        s3PathStyleAccess = true
+    }
+}
 ```
 
-### Full samplesheet
+- **Run sheet paths:** relative paths resolve against the run sheet's location, so `s3://trial-in/runs.csv` with `path` `data/x.raw` means `s3://trial-in/data/x.raw`.
+- **Copy mode:** `--publish_dir_mode` must be `copy` (the default).
+- **Sensitive mode with an object-store `--private_outdir`:** the Nextflow launch and work directories must stay local and private. Name their local parent with `--private_launch_dir` (checked).
+- **Bucket permissions:** keep the private bucket private with its bucket policy. Credentials stay with Nextflow and are never passed into the task containers.
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+## Study adapters
 
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
+A study adapter is a small, study-specific script, kept outside this repository, that writes the input tables. Typical jobs:
 
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
+- read lab sequence templates;
+- map raw files to samples;
+- fix template errors;
+- choose neutral run keys;
+- export the reported results as features and values;
+- collect contacts, protocol texts and identifier tokens.
+
+The CLIG ring trial adapter is an example. It lives with the private trial data and also passes the trial's raw-file identifiers and deposited names through `raw_id` and `deposited_name`, so earlier draft files stay valid.
+
+Validate adapter output quickly without running the pipeline:
+
+```bash
+docker run --rm -v "$PWD:$PWD" -w "$PWD" ghcr.io/lifs-tools/msdeposit-tools:0.1.0 \
+    msdeposit-tools validate-inputs --input runs.csv --assays assays.csv --samples samples.csv \
+    --studies studies.yml --mode sensitive --outdir /tmp/validated
 ```
-
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-
-An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
 
 ## Running the pipeline
 
-The typical command for running the pipeline is as follows:
-
 ```bash
-nextflow run lifs-tools/msdeposit --input ./samplesheet.csv --outdir ./results  -profile docker
+nextflow run lifs-tools/msdeposit -profile docker -params-file params.yml
 ```
 
-This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+with a `params.yml` holding the parameters, for example:
 
-Note that the pipeline will create the following files in your working directory:
-
-```bash
-work                # Directory containing the nextflow working files
-<OUTDIR>            # Finished results in specified location (defined with --outdir)
-.nextflow_log       # Log file from Nextflow
-# Other nextflow hidden files, eg. history of pipeline runs and old logs.
+```yaml title="params.yml"
+input: "runs.csv"
+assays: "assays.csv"
+samples: "samples.csv"
+studies: "studies.yml"
+contacts: "contacts.csv"
+protocols: "protocols/"
+outdir: "./results/"
+mztab_versions: "2.0.0-M,2.1.0-M"
+accept_vendor_licenses: true
 ```
 
-If you wish to repeatedly use the same parameters for multiple runs, rather than specifying each flag in the command, you can specify these in a params file.
+### Test profiles
 
-Pipeline settings can be provided in a `yaml` or `json` file via `-params-file <file>`.
+| Profile          | Content                                                                                                                                                                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test`           | standard mode, synthetic mzML (one study, two assays, four runs)                                                                                                                                                                                                                                         |
+| `test_sensitive` | sensitive mode, synthetic mzML with planted identifiers. They must all be removed for the study to pass; with `--mzml_body_rewrite false` the study is blocked                                                                                                                                           |
+| `test_mtbls`     | sensitive mode on real data: two SCIEX runs of MTBLS1381 (mzML) and one Thermo `.raw` file of MTBLS1382 (ThermoRawFileParser). Run `tests/data/mtbls/fetch.sh` first. The nf-test scans the output for identifiers known to be in the original files ([tests/data/mtbls](../tests/data/mtbls/README.md)) |
 
-> [!WARNING]
-> Do not use `-c <file>` to specify parameters as this will result in errors. Custom config files specified with `-c` must only be used for [tuning process resource specifications](https://nf-co.re/docs/running/run-pipelines#configuring-pipelines), other infrastructural tweaks (such as output directories), or module arguments (args).
-
-The above pipeline run specified with a params file in yaml format:
-
-```bash
-nextflow run lifs-tools/msdeposit -profile docker -params-file params.yaml
-```
-
-with:
-
-```yaml title="params.yaml"
-input: './samplesheet.csv'
-outdir: './results/'
-<...>
-```
-
-You can also generate such `YAML`/`JSON` files via [nf-core/launch](https://nf-co.re/launch).
+`test_sensitive` and `test_mtbls` switch the private-launch guard off, because test runners launch from their own directories. Never do this for real data.
 
 ### Updating the pipeline
-
-When you run the above command, Nextflow automatically pulls the pipeline code from GitHub and stores it as a cached version. When running the pipeline after this, it will always use the cached version if available - even if the pipeline has been updated since. To make sure that you're running the latest version of the pipeline, make sure that you regularly update the cached version of the pipeline:
 
 ```bash
 nextflow pull lifs-tools/msdeposit
@@ -102,110 +290,25 @@ nextflow pull lifs-tools/msdeposit
 
 ### Reproducibility
 
-It is a good idea to specify the pipeline version when running the pipeline on your data. This ensures that a specific version of the pipeline code and software are used when you run your pipeline. If you keep using the same tag, you'll be running the same version of the pipeline, even if there have been changes to the code since.
-
-First, go to the [lifs-tools/msdeposit releases page](https://github.com/lifs-tools/msdeposit/releases) and find the latest pipeline version - numeric only (eg. `1.3.1`). Then specify this when running the pipeline with `-r` (one hyphen) - eg. `-r 1.3.1`. Of course, you can switch to another version by changing the number after the `-r` flag.
-
-This version number will be logged in reports when you run the pipeline, so that you'll know what you used when you look back in the future.
-
-To further assist in reproducibility, you can use share and reuse [parameter files](#running-the-pipeline) to repeat pipeline runs with the same settings without having to write out a command with every single parameter.
-
-> [!TIP]
-> If you wish to share such profile (such as upload as supplementary material for academic publications), make sure to NOT include cluster specific paths to files, nor institutional specific profiles.
+Specify the pipeline version with `-r`, for example `-r 0.1.0`. The containers are pinned by tag or digest, the validators inside the `msdeposit-tools` image are pinned by checksum, and the MetaboLights validation bundle is pinned to a commit.
 
 ## Core Nextflow arguments
 
 > [!NOTE]
-> These options are part of Nextflow and use a _single_ hyphen (pipeline parameters use a double-hyphen)
+> These options are part of Nextflow and use a _single_ hyphen (pipeline parameters use a double-hyphen).
 
 ### `-profile`
 
-Use this parameter to choose a configuration profile. Profiles can give configuration presets for different compute environments.
-
-Several generic profiles are bundled with the pipeline which instruct the pipeline to use software packaged using different methods (Docker, Singularity, Podman, Shifter, Charliecloud, Apptainer, Conda) - see below.
-
-> [!IMPORTANT]
-> We highly recommend the use of Docker or Singularity containers for full pipeline reproducibility, however when this is not possible, Conda is also supported.
-
-The pipeline also dynamically loads configurations from [https://github.com/nf-core/configs](https://github.com/nf-core/configs) when it runs, making multiple config profiles for various institutional clusters available at run time. For more information and to check if your system is supported, please see the [nf-core/configs documentation](https://github.com/nf-core/configs#documentation).
-
-Note that multiple profiles can be loaded, for example: `-profile test,docker` - the order of arguments is important!
-They are loaded in sequence, so later profiles can overwrite earlier profiles.
-
-If `-profile` is not specified, the pipeline will run locally and expect all software to be installed and available on the `PATH`. This is _not_ recommended, since it can lead to different results on different machines dependent on the computer environment.
-
-- `test`
-  - A profile with a complete configuration for automated testing
-  - Includes links to test data so needs no other parameters
-- `docker`
-  - A generic configuration profile to be used with [Docker](https://docker.com/)
-- `singularity`
-  - A generic configuration profile to be used with [Singularity](https://sylabs.io/docs/)
-- `podman`
-  - A generic configuration profile to be used with [Podman](https://podman.io/)
-- `shifter`
-  - A generic configuration profile to be used with [Shifter](https://nersc.gitlab.io/development/shifter/how-to-use/)
-- `charliecloud`
-  - A generic configuration profile to be used with [Charliecloud](https://charliecloud.io/)
-- `apptainer`
-  - A generic configuration profile to be used with [Apptainer](https://apptainer.org/)
-- `wave`
-  - A generic configuration profile to enable [Wave](https://seqera.io/wave/) containers. Use together with one of the above (requires Nextflow `24.03.0-edge` or later).
-- `conda`
-  - A generic configuration profile to be used with [Conda](https://conda.io/docs/). Please only use Conda as a last resort i.e. when it's not possible to run the pipeline with Docker, Singularity, Podman, Shifter, Charliecloud, or Apptainer.
+Use `docker`; it is the only container engine supported in 0.1.0. Conda and mamba are not supported: the pipeline stops if `-profile conda` or `mamba` is given. Apptainer is planned for a later release (the Wine-based ProteoWizard image needs a writable prefix). Combine `docker` with `test` or `test_sensitive` for the tests, and with institutional profiles from [nf-core/configs](https://github.com/nf-core/configs) for your infrastructure.
 
 ### `-resume`
 
-Specify this when restarting a pipeline. Nextflow will use cached results from any pipeline steps where the inputs are the same, continuing from where it got to previously. For input to be considered the same, not only the names must be identical but the files' contents as well. For more info about this parameter, see [this blog post](https://www.nextflow.io/blog/2019/demystifying-nextflow-resume.html).
-
-You can also supply a run name to resume a specific run: `-resume [run-name]`. Use the `nextflow log` command to show previous run names.
+Resumes from cached results. Conversions are cached leniently, so re-syncing a raw-data mirror does not trigger reconversion.
 
 ### `-c`
 
-Specify the path to a specific config file (this is a core Nextflow command). See the [nf-core website documentation](https://nf-co.re/usage/configuration) for more information.
-
-## Custom configuration
-
-### Resource requests
-
-Whilst the default requirements set within the pipeline will hopefully work for most people and with most input data, you may find that you want to customise the compute resources that the pipeline requests. Each step in the pipeline has a default set of requirements for number of CPUs, memory and time. For most of the pipeline steps, if the job exits with any of the error codes specified [here](https://github.com/nf-core/rnaseq/blob/4c27ef5610c87db00c3c5a3eed10b1d161abf575/conf/base.config#L18) it will automatically be resubmitted with higher resources request (2 x original, then 3 x original). If it still fails after the third attempt then the pipeline execution is stopped.
-
-To change the resource requests, please see the [max resources](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#set-max-resources) and [customise process resources](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#customize-process-resources) section of the nf-core website.
-
-### Custom Containers
-
-In some cases, you may wish to change the container or conda environment used by a pipeline steps for a particular tool. By default, nf-core pipelines use containers and software from the [biocontainers](https://biocontainers.pro/) or [bioconda](https://bioconda.github.io/) projects. However, in some cases the pipeline specified version maybe out of date.
-
-To use a different container from the default container or conda environment specified in a pipeline, please see the [updating tool versions](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#update-tool-versions) section of the nf-core website.
-
-### Custom Tool Arguments
-
-A pipeline might not always support every possible argument or option of a particular tool used in pipeline. Fortunately, nf-core pipelines provide some freedom to users to insert additional parameters that the pipeline does not include by default.
-
-To learn how to provide additional arguments to a particular tool of the pipeline, please see the [customising tool arguments](https://nf-co.re/docs/running/configuration/nextflow-for-your-system#modifying-tool-arguments) section of the nf-core website.
-
-### nf-core/configs
-
-In most cases, you will only need to create a custom config as a one-off but if you and others within your organisation are likely to be running nf-core pipelines regularly and need to use the same settings regularly it may be a good idea to request that your custom config file is uploaded to the `nf-core/configs` git repository. Before you do this please can you test that the config file works with your pipeline of choice using the `-c` parameter. You can then create a pull request to the `nf-core/configs` repository with the addition of your config file, associated documentation file (see examples in [`nf-core/configs/docs`](https://github.com/nf-core/configs/tree/master/docs)), and amending [`nfcore_custom.config`](https://github.com/nf-core/configs/blob/master/nfcore_custom.config) to include your custom profile.
-
-See the main [Nextflow documentation](https://www.nextflow.io/docs/latest/config.html) for more information about creating your own configuration files.
-
-If you have any questions or issues please send us a message on [Slack](https://nf-co.re/join/slack) on the [`#configs` channel](https://nfcore.slack.com/channels/configs).
+Custom configuration (resources, `ext.args`, object-store credentials). Do not use it for pipeline parameters; use `-params-file` instead.
 
 ## Running in the background
 
-Nextflow handles job submissions and supervises the running jobs. The Nextflow process must run until the pipeline is finished.
-
-The Nextflow `-bg` flag launches Nextflow in the background, detached from your terminal so that the workflow does not stop if you log out of your session. The logs are saved to a file.
-
-Alternatively, you can use `screen` / `tmux` or similar tool to create a detached session which you can log back into at a later time.
-Some HPC setups also allow you to run nextflow within a cluster job submitted your job scheduler (from where it submits more jobs).
-
-## Nextflow memory requirements
-
-In some cases, the Nextflow Java virtual machines can start to request a large amount of memory.
-We recommend adding the following line to your environment to limit this (typically in `~/.bashrc` or `~./bash_profile`):
-
-```bash
-NXF_OPTS='-Xms1g -Xmx4g'
-```
+Long conversions can take days. Run Nextflow inside `screen`/`tmux` or with `nextflow -bg`, and keep the console log in a private location in sensitive mode.

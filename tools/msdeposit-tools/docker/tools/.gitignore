@@ -1,0 +1,3 @@
+# Local copies of the bundled tools (build-context fallback for docker/fetch_tools.sh); never committed.
+*
+!.gitignore

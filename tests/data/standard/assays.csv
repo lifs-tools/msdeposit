@@ -1,0 +1,5 @@
+study,assay,technique,polarity,column_model,column_type,measurement_type,protocol_keys
+S1,POS,LC-MS,positive,C18 100 x 2.1 mm,reverse phase,targeted,extraction;chromatography
+S1,NEG,LC-MS,negative,C18 100 x 2.1 mm,reverse phase,targeted,extraction;chromatography
+S2,POS,LC-MS,positive,C18 100 x 2.1 mm,reverse phase,targeted,extraction;chromatography
+S2,NEG,LC-MS,negative,C18 100 x 2.1 mm,reverse phase,targeted,extraction;chromatography

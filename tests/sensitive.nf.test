@@ -1,0 +1,63 @@
+nextflow_pipeline {
+
+    name "Test pipeline: sensitive mode"
+    script "../main.nf"
+    tag "pipeline"
+    tag "sensitive"
+    profile "test_sensitive,docker"
+
+    test("-profile test_sensitive: anonymised study passes, nothing identifying is published") {
+
+        when {
+            params {
+                outdir         = "$outputDir"
+                private_outdir = "$outputDir/../private"   // sibling of outdir, never nested
+            }
+        }
+
+        then {
+            def gate = new groovy.json.JsonSlurper().parse(file("$outputDir/../private/S1/gate.json"))
+            def planted = file("$projectDir/tests/data/sensitive/denylist.txt").readLines().findAll { t -> t }
+            def published = getAllFilesFromDir("$outputDir")
+            def leaks = published.findAll { f -> !f.isDirectory() }.collectMany { f ->
+                def text = f.text.toLowerCase()
+                planted.findAll { t -> text.contains(t.toLowerCase()) || f.name.toLowerCase().contains(t.toLowerCase()) }
+            }
+            assert workflow.success
+            assertAll(
+                { assert gate.status == 'passed' },
+                { assert ['S1', 'S2', 'S3', 'S4', 'S5', 'S7'].every { c -> gate.checks[c] == 'pass' } },
+                { assert leaks == [] },
+                { assert file("$outputDir").list().toList() == ['S1'] },          // no pipeline_info in public
+                { assert file("$outputDir/../private/pipeline_info").exists() },
+                { assert !file("$outputDir/S1/FILES/RAW_FILES").exists() },
+                { assert snapshot(
+                    removeNextflowVersion("$outputDir/../private/pipeline_info/msdeposit_software_versions.yml"),
+                    getAllFilesFromDir("$outputDir", relative: true, includeDir: true)
+                ).match() }
+            )
+        }
+    }
+
+    test("-profile test_sensitive --mzml_body_rewrite false: identifying body text blocks the study") {
+
+        when {
+            params {
+                outdir            = "$outputDir"
+                private_outdir    = "$outputDir/../private"
+                mzml_body_rewrite = false
+            }
+        }
+
+        then {
+            def gate = new groovy.json.JsonSlurper().parse(file("$outputDir/../private/S1/gate.json"))
+            assert workflow.failed
+            assertAll(
+                { assert gate.status == 'blocked' },
+                { assert gate.checks.S2 == 'fail' },
+                { assert !file("$outputDir/S1").exists() },
+                { assert file("$outputDir/../private/blocked/S1/upload_manifest.tsv").exists() }
+            )
+        }
+    }
+}

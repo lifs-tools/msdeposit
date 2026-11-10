@@ -1,0 +1,7 @@
+study,feature,run,study_variable,value,unit,variation,variation_type
+S1,f1,,NIST,12.5,UO:0000064,4.2,cv_percent
+S1,f1,r001,,12.1,UO:0000064,,
+S1,f2,,P1,3.3,UO:0000064,,none
+S2,f1,,NIST,12.5,UO:0000064,4.2,cv_percent
+S2,f1,r001,,12.1,UO:0000064,,
+S2,f2,,P1,3.3,UO:0000064,,none

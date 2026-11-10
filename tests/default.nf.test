@@ -1,6 +1,6 @@
 nextflow_pipeline {
 
-    name "Test pipeline"
+    name "Test pipeline: standard mode"
     script "../main.nf"
     tag "pipeline"
 
@@ -13,18 +13,19 @@ nextflow_pipeline {
         }
 
         then {
-            // stable_path: All files + folders in ${params.outdir}/ with a stable path (including file name)
-            def stable_path = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}'])
-            // stable_content: All files in ${params.outdir}/ with stable content
+            // stable_path: all files and folders in outdir with a stable path
+            def stable_path = getAllFilesFromDir(params.outdir, relative: true, includeDir: true, ignore: ['pipeline_info/*.{html,json,txt}', 'private/pipeline_info/*'])
+            // stable_content: files whose content does not depend on the date or the run
             def stable_content = getAllFilesFromDir(params.outdir, ignoreFile: 'tests/.nftignore')
+            // two studies: every per-study step must run for each of them
+            def gates = ['S1', 'S2'].collect { s -> new groovy.json.JsonSlurper().parse(file("$outputDir/private/${s}/gate.json")) }
             assert workflow.success
             assertAll(
+                { assert gates.every { g -> g.status == 'passed' } },
+                { assert file("$outputDir/S1/i_Investigation.txt").exists() && file("$outputDir/S2/i_Investigation.txt").exists() },
                 { assert snapshot(
-                    // pipeline versions.yml file for multiqc from which Nextflow version is removed because we test pipelines on multiple Nextflow versions
-                    removeNextflowVersion("$outputDir/pipeline_info/msdeposit_software_mqc_versions.yml"),
-                    // All stable path name, with a relative path
+                    removeNextflowVersion("$outputDir/pipeline_info/msdeposit_software_versions.yml"),
                     stable_path,
-                    // All files with stable contents
                     stable_content
                 ).match() }
             )

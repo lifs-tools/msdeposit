@@ -56,6 +56,37 @@ runs:
         channel-priority: strict
         conda-remove-defaults: true
 
+    # Test the msdeposit-tools image of this checkout, not the published one: build it under the tag the modules use
+    # (docker uses a local image of that name instead of pulling it). Built for every profile: the pipeline tests
+    # name `docker` in their own profile, so the conda jobs run the containers too.
+    - name: Build the msdeposit-tools image
+      shell: bash
+      run: |
+        tag=$(grep -ho "ghcr.io/lifs-tools/msdeposit-tools:[A-Za-z0-9._-]*" modules/local/*/main.nf | sort -u)
+        if [ "$(echo "$tag" | wc -l)" != 1 ]; then echo "::error::modules use different msdeposit-tools tags: $tag"; exit 1; fi
+        docker build -t "$tag" tools/msdeposit-tools
+        echo "MSDEPOSIT_TOOLS_IMAGE=$tag" >> "$GITHUB_ENV"
+
+    # Apptainer does not see the docker daemon's images: convert the image into the Nextflow image cache under the
+    # name Nextflow looks for (docker://<image> with '/' and ':' replaced by '-', plus .img)
+    - name: Convert the msdeposit-tools image for Apptainer
+      if: contains(inputs.profile, 'singularity')
+      shell: bash
+      run: |
+        img="$NXF_SINGULARITY_CACHEDIR/$(echo "$MSDEPOSIT_TOOLS_IMAGE" | tr '/:' '--').img"
+        apptainer build "$img" "docker-daemon://$MSDEPOSIT_TOOLS_IMAGE"
+
+    # Real-data test (tests/mtbls.nf.test): runs of MTBLS1381/MTBLS1382, downloaded once and verified by checksum
+    - name: Cache MetaboLights test data
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: tests/data/mtbls/data
+        key: mtbls-test-data-${{ hashFiles('tests/data/mtbls/SHA256SUMS') }}
+
+    - name: Fetch MetaboLights test data
+      shell: bash
+      run: tests/data/mtbls/fetch.sh
+
     - name: Run nf-test
       shell: bash
       env:

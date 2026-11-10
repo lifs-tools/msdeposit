@@ -19,6 +19,11 @@ on:
 env:
   NXF_ANSI_LOG: false
 
+# private repository: nf-core reads the pipeline through the GitHub API and git with this token
+permissions:
+  contents: read
+  packages: read # pull the msdeposit-tools image while its ghcr package is private
+
 jobs:
   configure:
     runs-on: ubuntu-latest
@@ -35,7 +40,8 @@ jobs:
           echo "REPO_BRANCH=${{ github.event.inputs.testbranch || 'dev' }}" >> "$GITHUB_OUTPUT"
 
   download:
-    runs-on: ubuntu-latest
+    # setup-apptainer installs a .deb that needs libfuse3-3, which Ubuntu 26.04 (ubuntu-latest) no longer has
+    runs-on: ubuntu-24.04
     needs: configure
     steps:
       - name: Check out pipeline code
@@ -74,7 +80,13 @@ jobs:
       - name: Download the pipeline
         env:
           NXF_SINGULARITY_CACHEDIR: ./singularity_container_images
+          APPTAINER_DOCKER_USERNAME: ${{ github.actor }}
+          APPTAINER_DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # nf-core uses GITHUB_TOKEN for the API; git clone needs it as a header (as actions/checkout does)
+          git config --global http.https://github.com/.extraheader \
+            "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
           nf-core pipelines download ${{ needs.configure.outputs.REPO_LOWERCASE }} \
           --revision ${{ needs.configure.outputs.REPO_BRANCH }} \
           --outdir ./${{ needs.configure.outputs.REPOTITLE_LOWERCASE }} \
@@ -103,6 +115,8 @@ jobs:
         env:
           NXF_SINGULARITY_CACHEDIR: ./singularity_container_images
           NXF_SINGULARITY_HOME_MOUNT: true
+          APPTAINER_DOCKER_USERNAME: ${{ github.actor }}
+          APPTAINER_DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: nextflow run ./${{needs.configure.outputs.REPOTITLE_LOWERCASE }}/$( sed 's/\W/_/g' <<< ${{ needs.configure.outputs.REPO_BRANCH }}) -stub -profile test,singularity --outdir ./results
       - name: Run the downloaded pipeline (stub run not supported)
         id: run_pipeline
@@ -110,6 +124,8 @@ jobs:
         env:
           NXF_SINGULARITY_CACHEDIR: ./singularity_container_images
           NXF_SINGULARITY_HOME_MOUNT: true
+          APPTAINER_DOCKER_USERNAME: ${{ github.actor }}
+          APPTAINER_DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: nextflow run ./${{ needs.configure.outputs.REPOTITLE_LOWERCASE }}/$( sed 's/\W/_/g' <<< ${{ needs.configure.outputs.REPO_BRANCH }}) -profile test,singularity --outdir ./results
 
       - name: Count the downloaded number of container images

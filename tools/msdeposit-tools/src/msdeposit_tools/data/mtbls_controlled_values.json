@@ -1,0 +1,127 @@
+{
+ "source": "Curated from the controlled vocabularies of the MetaboLights validation bundle 2.2.1 (controls, templates). Terms are [term, source, accession URI].",
+ "profiles": {
+  "validator": "generic values accepted by the local validation of the pinned bundle (template version 1.0)",
+  "mhd": "MetabolomicsHub (ms-mhd-enabled) values listed in the bundle; re-check against the server validator at submission"
+ },
+ "polarity": {
+  "validator": {
+   "positive": ["positive", "", ""],
+   "negative": ["negative", "", ""],
+   "alternating": ["alternating", "", ""]
+  },
+  "mhd": {
+   "positive": ["positive polarity acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1000077"],
+   "negative": ["negative polarity acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1000076"],
+   "alternating": ["alternating polarity acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1002833"]
+  }
+ },
+ "column_type_aliases": {
+  "reverse phase": "reverse phase", "reversed phase": "reverse phase", "reversed-phase": "reverse phase",
+  "rp": "reverse phase", "rp-lc": "reverse phase", "rplc": "reverse phase",
+  "reversed phase chromatography": "reverse phase",
+  "hilic": "HILIC", "hydrophilic interaction": "HILIC", "hydrophilic interaction liquid chromatography": "HILIC",
+  "normal phase": "normal phase", "np": "normal phase", "normal phase chromatography": "normal phase",
+  "high polarity": "high polarity", "polar": "high polarity", "polar stationary phase": "high polarity",
+  "medium polarity": "medium polarity", "mid-polar": "medium polarity", "mid-polar stationary phase": "medium polarity",
+  "low polarity": "low polarity", "non-polar": "low polarity", "non-polar stationary phase": "low polarity"
+ },
+ "column_type": {
+  "validator": {
+   "reverse phase": ["reverse phase", "MTBLS", "http://www.ebi.ac.uk/metabolights/ontology/MTBLS_000853"],
+   "normal phase": ["normal phase", "MTBLS", "http://www.ebi.ac.uk/metabolights/ontology/MTBLS_000855"],
+   "HILIC": ["HILIC", "MTBLS", "http://www.ebi.ac.uk/metabolights/ontology/MTBLS_000856"],
+   "high polarity": ["high polarity", "MTBLS", "http://www.ebi.ac.uk/metabolights/ontology/MTBLS_000991"],
+   "medium polarity": ["medium polarity", "MTBLS", "http://www.ebi.ac.uk/metabolights/ontology/MTBLS_000989"],
+   "low polarity": ["low polarity", "MTBLS", "http://www.ebi.ac.uk/metabolights/ontology/MTBLS_000990"]
+  },
+  "mhd": {
+   "reverse phase": ["reversed phase chromatography", "MS", "http://purl.obolibrary.org/obo/MS_1003582"],
+   "normal phase": ["normal phase chromatography", "MS", "http://purl.obolibrary.org/obo/MS_1003583"],
+   "HILIC": ["hydrophilic interaction liquid chromatography", "MS", "http://purl.obolibrary.org/obo/MS_1003584"],
+   "high polarity": ["polar stationary phase gas-liquid chromatography", "MS", "http://purl.obolibrary.org/obo/MS_1003720"],
+   "medium polarity": ["mid-polar stationary phase gas-liquid chromatography", "MS", "http://purl.obolibrary.org/obo/MS_1003719"],
+   "low polarity": ["non-polar stationary phase gas-liquid chromatography", "MS", "http://purl.obolibrary.org/obo/MS_1003718"]
+  }
+ },
+ "instrument_class": {
+  "quadrupole ion trap orbitrap": ["quadrupole ion trap orbitrap instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003770"],
+  "quadrupole orbitrap": ["quadrupole orbitrap instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003769"],
+  "ion trap orbitrap": ["ion trap orbitrap instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003768"],
+  "orbitrap": ["orbitrap instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003953"],
+  "quadrupole ion mobility time-of-flight": ["quadrupole ion mobility time-of-flight instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003767"],
+  "quadrupole time-of-flight": ["quadrupole time-of-flight instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003763"],
+  "ion trap time-of-flight": ["ion trap time-of-flight instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003764"],
+  "tandem time-of-flight": ["tandem time-of-flight instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003946"],
+  "time-of-flight": ["time-of-flight instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003951"],
+  "triple quadrupole": ["triple quadrupole instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003762"],
+  "quadrupole": ["quadrupole instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003950"],
+  "ion trap": ["ion trap instrument", "MS", "http://purl.obolibrary.org/obo/MS_1003952"]
+ },
+ "measurement_type": {
+  "untargeted": ["untargeted analysis", "MS", "http://purl.obolibrary.org/obo/MS_1003904"],
+  "targeted": ["targeted analysis", "MS", "http://purl.obolibrary.org/obo/MS_1003905"],
+  "semi-targeted": ["semi-targeted analysis", "MS", "http://purl.obolibrary.org/obo/MS_1003906"]
+ },
+ "profiling_design": {
+  "untargeted": ["untargeted metabolite profiling", "MSIO", "http://purl.obolibrary.org/obo/MSIO_0000101"],
+  "targeted": ["targeted metabolite profiling", "MSIO", "http://purl.obolibrary.org/obo/MSIO_0000100"]
+ },
+ "technique_design": {
+  "LC-MS": ["liquid chromatography-mass spectrometry", "CHMO", "http://purl.obolibrary.org/obo/CHMO_0000524"],
+  "GC-MS": ["gas chromatography-mass spectrometry", "CHMO", "http://purl.obolibrary.org/obo/CHMO_0000497"],
+  "DI-MS": ["infusion", "MS", "http://purl.obolibrary.org/obo/MS_1000060"],
+  "FIA-MS": ["flow injection analysis", "MS", "http://purl.obolibrary.org/obo/MS_1000058"],
+  "MALDI-MS": ["matrix-assisted laser desorption ionization", "MS", "http://purl.obolibrary.org/obo/MS_1000075"]
+ },
+ "technology_type": ["mass spectrometry assay", "OBI", "http://purl.obolibrary.org/obo/OBI_0000470"],
+ "acquisition_descriptors": {
+  "dda": [["data-dependent acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1003221"]],
+  "dia": [["data-independent acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1003215"]],
+  "mse": [["data-independent acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1003215"]],
+  "swath": [["data-independent acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1003215"]],
+  "aif": [["data-independent acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1003215"]],
+  "pasef": [["data-dependent acquisition", "MS", "http://purl.obolibrary.org/obo/MS_1003221"],
+            ["ion mobility separation", "MS", "http://purl.obolibrary.org/obo/MS_1003219"]],
+  "srm": [["selected reaction monitoring", "MS", "http://purl.obolibrary.org/obo/MS_1000206"]],
+  "mrm": [["selected reaction monitoring", "MS", "http://purl.obolibrary.org/obo/MS_1000206"]]
+ },
+ "spectrum_representation": {
+  "centroid": ["centroid spectrum", "MS", "http://purl.obolibrary.org/obo/MS_1000127"],
+  "profile": ["profile spectrum", "MS", "http://purl.obolibrary.org/obo/MS_1000128"]
+ },
+ "omics_type": {
+  "metabolomics": ["Metabolomics", "EDAM", "http://edamontology.org/topic_3172"],
+  "lipidomics": ["Lipidomics", "EDAM", "http://edamontology.org/topic_0153"],
+  "fluxomics": ["Fluxomics", "EDAM", "http://edamontology.org/topic_3955"],
+  "exposomics": ["Exposomics", "", ""]
+ },
+ "protocol_type": {
+  "Sample collection": ["sample collection protocol", "EFO", "http://www.ebi.ac.uk/efo/EFO_0005518"],
+  "Extraction": ["sample preparation", "MS", "http://purl.obolibrary.org/obo/MS_1000831"],
+  "Chromatography": ["chromatography", "CHMO", "http://purl.obolibrary.org/obo/CHMO_0001000"],
+  "Capillary Electrophoresis": ["capillary electrophoresis", "CHMO", "http://purl.obolibrary.org/obo/CHMO_0001024"],
+  "Flow Injection Analysis": ["flow injection analysis", "MS", "http://purl.obolibrary.org/obo/MS_1000058"],
+  "Direct infusion": ["infusion", "MS", "http://purl.obolibrary.org/obo/MS_1000060"],
+  "Mass spectrometry": ["mass spectrometry", "CHMO", "http://purl.obolibrary.org/obo/CHMO_0000470"],
+  "Data transformation": ["data transformation", "OBI", "http://purl.obolibrary.org/obo/OBI_0200000"],
+  "Metabolite identification": ["metabolite identification", "MI", "http://purl.obolibrary.org/obo/MI_2131"]
+ },
+ "person_roles": {
+  "principal investigator": ["Principal Investigator", "NCIT", "http://purl.obolibrary.org/obo/NCIT_C19924"],
+  "investigator": ["Investigator", "NCIT", "http://purl.obolibrary.org/obo/NCIT_C25936"],
+  "author": ["Author", "NCIT", "http://purl.obolibrary.org/obo/NCIT_C42781"]
+ },
+ "publication_status": {
+  "in preparation": ["in preparation", "EFO", "http://www.ebi.ac.uk/efo/EFO_0001795"],
+  "submitted": ["submitted", "EFO", "http://www.ebi.ac.uk/efo/EFO_0001794"],
+  "preprint": ["preprint", "EFO", "http://www.ebi.ac.uk/efo/EFO_0010558"],
+  "published": ["published", "EFO", "http://www.ebi.ac.uk/efo/EFO_0001796"]
+ },
+ "accession_prefixes": {
+  "EFO": "http://www.ebi.ac.uk/efo/EFO_",
+  "EDAM": "http://edamontology.org/",
+  "MTBLS": "http://www.ebi.ac.uk/metabolights/ontology/MTBLS_",
+  "ROR": "https://ror.org/"
+ }
+}

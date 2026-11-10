@@ -1,0 +1,5 @@
+study,study_variable,description,average_function
+S1,NIST,NIST SRM 1950 QC,median
+S1,P1,Plasma 1,median
+S2,NIST,NIST SRM 1950 QC,median
+S2,P1,Plasma 1,median

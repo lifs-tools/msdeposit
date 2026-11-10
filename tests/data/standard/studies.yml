@@ -1,0 +1,12 @@
+defaults:
+  license: CC BY 4.0
+  release_date: '2027-01-15'
+studies:
+  S1:
+    title: Synthetic lipidomics test study
+    description: Two assays, four runs.
+    protocols:
+      Extraction: extraction
+  S2:
+    title: Synthetic lipidomics test study, second study
+    description: The same runs as S1 under another study key.
