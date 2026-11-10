@@ -1,4 +1,4 @@
 study,run,assay,sample,format,path,vendor,polarity
 SRM,r01,NEG,PLT_unst_01,mzml,data/QTrap007485_031618-Unst1.mzML,sciex,alternating
 SRM,r02,NEG,PLT_crp_01,mzml,data/QTrap007549_031618-1CRP2.mzML,sciex,alternating
-DIA,r01,NEG,PLT_unst_01,vendor_raw,data/QExHF03_HPLC_0000195.raw,,negative
+DIA,r01,NEG,PLT_unst_01,vendor_raw,data/QExHF03_HPLC_0000195.raw,thermo,negative

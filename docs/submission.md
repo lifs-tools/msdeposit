@@ -50,6 +50,7 @@ flowchart LR
   ```
 
 - **Vendor converter:**
+  - **Thermo rows need `vendor` set to `thermo`:** `--thermo_converter thermorawfileparser` only applies to rows with that value. A `.raw` file without a vendor could also be Waters, so it goes to ProteoWizard.
   - **Licences:** vendor files other than Thermo `.raw` are converted with the ProteoWizard image, which bundles the vendor reader libraries. Read the [ProteoWizard licences](https://proteowizard.sourceforge.io/licenses.html) and pass `--accept_vendor_licenses`.
   - **Thermo without Wine:** Thermo `.raw` files can be converted with ThermoRawFileParser instead (`--thermo_converter thermorawfileparser`), which needs neither Wine nor the licence switch.
 
