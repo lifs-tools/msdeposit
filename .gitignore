@@ -12,3 +12,4 @@ null/
 .nf-test/
 tools/msdeposit-tools/.venv/
 .nf-test.log
+tests/data/mtbls/data/

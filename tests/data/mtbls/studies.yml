@@ -1,0 +1,25 @@
+# Two runs of MTBLS1381 (SCIEX QTRAP 6500, SRM) and one run of MTBLS1382 (Thermo Q Exactive HF, DIA), deposited
+# again under neutral study keys. See README.md for the provenance of the data.
+defaults:
+  license: CC BY 4.0
+  release_date: '2027-01-15'
+  omics_type: lipidomics
+  protocols:
+    Extraction: extraction
+studies:
+  SRM:
+    title: Platelet lipid mediator profiling by targeted LC-MS (msdeposit test data from MTBLS1381)
+    description: >-
+      Two runs of the public MetaboLights study MTBLS1381, which profiles lipid mediators in isolated human platelets
+      by targeted LC-MS with selected reaction monitoring. They are deposited again here to test the conversion and
+      anonymisation steps of msdeposit.
+    factors:
+      - {name: Treatment, type: {term: treatment, source: EFO, accession: http://www.ebi.ac.uk/efo/EFO_0000727}}
+  DIA:
+    title: Platelet lipid mediator validation by DIA LC-MS (msdeposit test data from MTBLS1382)
+    description: >-
+      One run of the public MetaboLights study MTBLS1382, which validates lipid mediators in isolated human platelets
+      by data-independent acquisition on an Orbitrap instrument. It is deposited again here to test the vendor file
+      conversion and anonymisation steps of msdeposit.
+    factors:
+      - {name: Treatment, type: {term: treatment, source: EFO, accession: http://www.ebi.ac.uk/efo/EFO_0000727}}

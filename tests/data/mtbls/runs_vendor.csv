@@ -1,0 +1,4 @@
+study,run,assay,sample,format,path,vendor,polarity
+SRM,r01,NEG,PLT_unst_01,vendor_raw,data/QTrap007485_031618.wiff,,alternating
+SRM,r02,NEG,PLT_crp_01,vendor_raw,data/QTrap007549_031618.wiff,,alternating
+DIA,r01,NEG,PLT_unst_01,vendor_raw,data/QExHF03_HPLC_0000195.raw,,negative

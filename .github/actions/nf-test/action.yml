@@ -56,6 +56,24 @@ runs:
         channel-priority: strict
         conda-remove-defaults: true
 
+    # The modules use ghcr.io/lifs-tools/msdeposit-tools:dev; until it is published, build it from this checkout
+    # (docker uses a local image of that name instead of pulling it)
+    - name: Build the msdeposit-tools image
+      if: contains(inputs.profile, 'docker')
+      shell: bash
+      run: docker build -t ghcr.io/lifs-tools/msdeposit-tools:dev tools/msdeposit-tools
+
+    # Real-data test (tests/mtbls.nf.test): runs of MTBLS1381/MTBLS1382, downloaded once and verified by checksum
+    - name: Cache MetaboLights test data
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: tests/data/mtbls/data
+        key: mtbls-test-data-${{ hashFiles('tests/data/mtbls/SHA256SUMS') }}
+
+    - name: Fetch MetaboLights test data
+      shell: bash
+      run: tests/data/mtbls/fetch.sh
+
     - name: Run nf-test
       shell: bash
       env:

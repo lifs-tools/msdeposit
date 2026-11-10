@@ -4,6 +4,8 @@
 
 ## Introduction
 
+For a step-by-step walkthrough of a deposition, see [Preparing a submission](submission.md).
+
 msdeposit turns mass spectrometry runs plus study metadata into upload sets for [MetaboLights](https://www.ebi.ac.uk/metabolights/), one per study. A **study** becomes one MetaboLights study, and an **assay** becomes one ISA assay file. An assay groups the runs that share technique, polarity and instrument.
 
 You describe the study in a few tables, the *input contract*. The pipeline never reads lab-specific templates or sample lists itself. If your raw information comes in another form, such as lab sequence templates, write a small **study adapter** that produces the tables; see [Study adapters](#study-adapters). The synthetic test data in [`tests/data/standard`](../tests/data/standard) is a complete minimal example, and [`tests/data/sensitive`](../tests/data/sensitive) is the same study for sensitive mode.
@@ -276,8 +278,9 @@ accept_vendor_licenses: true
 | --- | --- |
 | `test` | standard mode, synthetic mzML (one study, two assays, four runs) |
 | `test_sensitive` | sensitive mode, synthetic mzML with planted identifiers. They must all be removed for the study to pass; with `--mzml_body_rewrite false` the study is blocked |
+| `test_mtbls` | sensitive mode on real data: two SCIEX runs of MTBLS1381 (mzML) and one Thermo `.raw` file of MTBLS1382 (ThermoRawFileParser). Run `tests/data/mtbls/fetch.sh` first. The nf-test scans the output for identifiers known to be in the original files ([tests/data/mtbls](../tests/data/mtbls/README.md)) |
 
-`test_sensitive` switches the private-launch guard off, because test runners launch from their own directories. Never do this for real data.
+`test_sensitive` and `test_mtbls` switch the private-launch guard off, because test runners launch from their own directories. Never do this for real data.
 
 ### Updating the pipeline
 

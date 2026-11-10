@@ -65,6 +65,8 @@ Submission to MetaboLights is deliberately **not** part of the pipeline. Review 
 > ```bash
 > nextflow run lifs-tools/msdeposit -profile test,docker --outdir results
 > ```
+>
+> To rehearse the sensitive path on real vendor data, run `-profile test_mtbls` with runs of the public MetaboLights studies MTBLS1381 and MTBLS1382 (see [docs/submission.md](docs/submission.md)).
 
 Describe your study in a few CSV files and one YAML file (all columns are explained in [docs/usage.md](docs/usage.md)):
 
@@ -110,6 +112,7 @@ The default private location in standard mode is `<outdir>/private`. See [docs/o
 
 ## Documentation
 
+- [docs/submission.md](docs/submission.md): step by step from vendor files to a checked upload set: conversion, pseudonymisation, reviewing identifier hits and an independent post-hoc scan, rehearsed on public MetaboLights studies.
 - [docs/usage.md](docs/usage.md): inputs, modes, parameters, object stores, study adapters.
 - [docs/output.md](docs/output.md): output layout, checks and reports.
 - [docs/design.md](docs/design.md): design, check catalogue and leak boundary.

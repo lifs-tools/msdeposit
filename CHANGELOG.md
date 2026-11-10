@@ -21,6 +21,10 @@ Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-c
 - Object-store support (S3 and compatible) for inputs and both output roots (`--private_launch_dir`).
 - `msdeposit-tools` Python package and container with the domain logic and pinned offline validators.
 - Test profiles `test` and `test_sensitive` with synthetic data; nf-tests.
+- Test profile `test_mtbls` with real runs of MetaboLights studies MTBLS1381 (SCIEX) and MTBLS1382 (Thermo), fetched and
+  verified by `tests/data/mtbls/fetch.sh`; its nf-test scans the public output for identifiers known to be in the
+  original files. CI builds the `msdeposit-tools` image and caches the test data.
+- `docs/submission.md`: step-by-step guide to conversion, pseudonymisation, hit review and post-hoc verification.
 
 ### `Fixed`
 

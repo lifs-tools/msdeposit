@@ -1,0 +1,4 @@
+study,source_name,sample_name,characteristics:Organism,characteristics:Organism::source,characteristics:Organism::accession,characteristics:Organism part,characteristics:Organism part::source,characteristics:Organism part::accession,factor:Treatment
+SRM,Platelets unstimulated,PLT_unst_01,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood platelet,BTO,http://purl.obolibrary.org/obo/BTO_0000132,unstimulated
+SRM,Platelets CRP,PLT_crp_01,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood platelet,BTO,http://purl.obolibrary.org/obo/BTO_0000132,C-reactive protein
+DIA,Platelets unstimulated,PLT_unst_01,Homo sapiens,NCBITaxon,http://purl.obolibrary.org/obo/NCBITaxon_9606,blood platelet,BTO,http://purl.obolibrary.org/obo/BTO_0000132,unstimulated

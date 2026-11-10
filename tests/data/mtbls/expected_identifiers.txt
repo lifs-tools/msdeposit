@@ -1,0 +1,25 @@
+# Identifying strings known to be in the original files of tests/data/mtbls (checked by tests/mtbls.nf.test).
+# This list is NOT passed to the pipeline: the pipeline has to find and remove these identifiers on its own
+# (vendor metadata, mzML metadata, original file names). The test asserts that
+#   1. every token occurs in at least one input file (ASCII or UTF-16LE), so the check is not vacuous, and
+#   2. no token occurs in the content or the path of any published file.
+# One token per line, matched case-insensitively as a substring; '#' starts a comment.
+
+# original file stems (SCIEX instrument run numbers, Thermo instrument and sequence names)
+QTrap007485
+QTrap007549
+Unst1
+1CRP2
+QExHF03
+HPLC_0000195
+# acquisition PC paths in the mzML source file locations (MTBLS1381)
+D:\Metabolights
+Metabolights-MTBLS1381
+Qtrap_mediators
+# Thermo raw file header: data and method paths, method name, logon account, workstation name, sample list folder
+D:\Data\HPLC12
+D:\Methods
+20minLC_FS_DIA
+lipidsearch
+DO2-LPC
+HuPl_unst_pellet
