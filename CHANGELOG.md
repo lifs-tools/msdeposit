@@ -38,6 +38,8 @@ Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-c
 - Test profiles fit GitHub runners (2 CPUs, 6 GB); `test_mtbls` marks its Thermo run as `vendor=thermo`.
 - Publishing the private check files works on Nextflow 26.10 (a publish `>>` inside a nested closure failed there).
 - Singularity CI jobs test the image built from the checkout (converted into the Nextflow image cache).
+- `-profile conda`/`mamba` stops with a clear message (the tools exist only as a container image) instead of failing
+  with `msdeposit-tools: command not found` on Nextflow 26.10; conda is no longer in the CI matrix.
 
 ### `Dependencies`
 

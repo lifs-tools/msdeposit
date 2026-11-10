@@ -43,6 +43,12 @@ workflow PIPELINE_INITIALISATION {
     // Print version and exit if required and dump pipeline parameters to JSON file
     // (to private_outdir/pipeline_info in sensitive mode: parameter values contain paths)
     //
+    // The msdeposit-tools modules (and their bundled validators) exist only as a container image
+    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() > 0) {
+        error("lifs-tools/msdeposit runs its tools in containers and does not support conda or mamba: " +
+              "use -profile docker or -profile singularity")
+    }
+
     UTILS_NEXTFLOW_PIPELINE (
         version,
         true,
