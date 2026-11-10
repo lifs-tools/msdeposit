@@ -247,7 +247,7 @@ The CLIG ring trial adapter is an example. It lives with the private trial data 
 Validate adapter output quickly without running the pipeline:
 
 ```bash
-docker run --rm -v "$PWD:$PWD" -w "$PWD" ghcr.io/lifs-tools/msdeposit-tools:dev \
+docker run --rm -v "$PWD:$PWD" -w "$PWD" ghcr.io/lifs-tools/msdeposit-tools:0.1.0 \
     msdeposit-tools validate-inputs --input runs.csv --assays assays.csv --samples samples.csv \
     --studies studies.yml --mode sensitive --outdir /tmp/validated
 ```
@@ -290,7 +290,7 @@ nextflow pull lifs-tools/msdeposit
 
 ### Reproducibility
 
-Specify the pipeline version with `-r`, for example `-r 1.0.0`. The containers are pinned by tag or digest, the validators inside the `msdeposit-tools` image are pinned by checksum, and the MetaboLights validation bundle is pinned to a commit.
+Specify the pipeline version with `-r`, for example `-r 0.1.0`. The containers are pinned by tag or digest, the validators inside the `msdeposit-tools` image are pinned by checksum, and the MetaboLights validation bundle is pinned to a commit.
 
 ## Core Nextflow arguments
 

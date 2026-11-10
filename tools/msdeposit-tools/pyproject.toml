@@ -1,6 +1,6 @@
 [project]
 name = "msdeposit-tools"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Domain logic of the lifs-tools/msdeposit pipeline: mzML metadata, deposit plan, anonymisation, ISA-Tab, MAF, mzTab-M, mzQC and checks for MetaboLights depositions"
 readme = "README.md"
 license = "MIT"

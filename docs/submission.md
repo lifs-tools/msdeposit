@@ -43,10 +43,10 @@ flowchart LR
 ## 0. Prerequisites
 
 - **Nextflow and Docker:** Nextflow ≥ 25.10.4 and Docker; your user must be allowed to run containers.
-- **The `msdeposit-tools` image:** until it is published, build it once from a checkout of this repository:
+- **The `msdeposit-tools` image:** the pipeline pulls `ghcr.io/lifs-tools/msdeposit-tools:<version>` (the tag in `modules/local/*/main.nf`). To run a checkout without the published image, build it under that tag:
 
   ```bash
-  docker build -t ghcr.io/lifs-tools/msdeposit-tools:dev tools/msdeposit-tools
+  docker build -t ghcr.io/lifs-tools/msdeposit-tools:0.1.0 tools/msdeposit-tools
   ```
 
 - **Vendor converter:**
@@ -139,7 +139,7 @@ For a MetaboLights study, the ISA-Tab already holds everything:
 Validate the tables before anything is converted:
 
 ```bash
-docker run --rm -v "$PWD:$PWD" -w "$PWD" ghcr.io/lifs-tools/msdeposit-tools:dev \
+docker run --rm -v "$PWD:$PWD" -w "$PWD" ghcr.io/lifs-tools/msdeposit-tools:0.1.0 \
     msdeposit-tools validate-inputs --input runs.csv --assays assays.csv --samples samples.csv \
     --studies studies.yml --mode sensitive --outdir /tmp/validated
 ```
@@ -242,7 +242,7 @@ The gate only checks the tokens the pipeline knows about. Before uploading, scan
 ```bash
 printf 'token\n' > my_tokens.tsv; cat lab_identifiers.txt >> my_tokens.tsv   # a TSV with a 'token' column
 cp -r /secure/study/public /secure/study/private/public_copy                  # hits are MOVED to the quarantine dir
-docker run --rm --network none -v /secure/study:/secure/study ghcr.io/lifs-tools/msdeposit-tools:dev \
+docker run --rm --network none -v /secure/study:/secure/study ghcr.io/lifs-tools/msdeposit-tools:0.1.0 \
     msdeposit-tools canary-scan --denylist /secure/study/my_tokens.tsv \
     --root /secure/study/private/public_copy --quarantine-dir /secure/study/private/quarantine \
     --console-log /secure/study/private/console.log --fail-exit

@@ -2,7 +2,7 @@ process DEPOSIT_REPORT {
     tag "${study}"
     label 'process_single'
     label 'msdeposit_tools'
-    container 'ghcr.io/lifs-tools/msdeposit-tools:dev'
+    container 'ghcr.io/lifs-tools/msdeposit-tools:0.1.0'
 
     input:
     tuple val(study), path(plan), path(checks, stageAs: 'checks/??/*'), path(manifest), path(gate), path(mapping), path(hits)

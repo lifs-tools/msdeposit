@@ -2,7 +2,7 @@ process ASSEMBLE {
     tag "${study}"
     label 'process_low'
     label 'msdeposit_tools'
-    container 'ghcr.io/lifs-tools/msdeposit-tools:dev'
+    container 'ghcr.io/lifs-tools/msdeposit-tools:0.1.0'
 
     input:
     tuple val(study), path(plan), path(isa), path(maf, stageAs: 'maf/*'), path(mztab, stageAs: 'mztab/*'), path(mzqc, stageAs: 'mzqc/*'), path(mzml, stageAs: 'mzml/??/*'), path(raw, stageAs: 'raw/??/*')

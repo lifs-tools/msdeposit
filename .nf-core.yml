@@ -46,7 +46,7 @@ template:
     ISA-Tab, MAF, mzTab-M, mzQC) with an optional sensitive-data path (anonymised
     mzML only, identifier checks)
   author: Nils Hoffmann
-  version: 1.0.0dev
+  version: 0.1.0
   outdir: .
   skip_features:
     - igenomes
