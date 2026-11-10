@@ -31,6 +31,9 @@ Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-c
 - CI: the image build checks the current jmzTab-m `dev-latest` validator (upstream rebuilt it on 2026-11-10); jobs
   that install Apptainer run on `ubuntu-24.04` (its package needs `libfuse3-3`, missing on 26.04); the template
   version check can read the private repository; prettier formatting; lint settings for a non-nf-core pipeline.
+- ThermoRawFileParser output is re-indexed by `MZML_INDEX`: its index offsets point at the indentation before each
+  element, so C2 failed it as "index invalid" and blocked every study with Thermo runs.
+- Test profiles fit GitHub runners (2 CPUs, 6 GB); `test_mtbls` marks its Thermo run as `vendor=thermo`.
 
 ### `Dependencies`
 

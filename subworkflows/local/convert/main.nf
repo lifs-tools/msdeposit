@@ -25,11 +25,14 @@ workflow CONVERT {
     PWIZ_MSCONVERT(ch_branched.pwiz)
     THERMORAWFILEPARSER(ch_branched.trfp.map { meta, path, _companions -> [meta, path] })
     TEXT_TO_MZML(ch_branched.text.map { meta, path, _companions -> [meta, path] })
-    MZML_INDEX(ch_branched.mzml.map { meta, path, _companions -> [meta, path] })
+    // ThermoRawFileParser 1.4.5 writes index offsets that point at the indentation before each element, not at
+    // its '<' (C2 fails them as "index invalid"); MZML_INDEX re-indexes its output like any foreign mzML
+    MZML_INDEX(
+        ch_branched.mzml.map { meta, path, _companions -> [meta, path] }
+            .mix(THERMORAWFILEPARSER.out.spectra)
+    )
 
-    // ThermoRawFileParser writes <stem>.mzML; MZML_INDEX normalises it like any foreign mzML would be
     def ch_mzml = PWIZ_MSCONVERT.out.mzml
-        .mix(THERMORAWFILEPARSER.out.spectra)
         .mix(TEXT_TO_MZML.out.mzml)
         .mix(MZML_INDEX.out.mzml)
 
