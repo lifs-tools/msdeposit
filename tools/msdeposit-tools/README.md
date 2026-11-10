@@ -8,21 +8,21 @@ defined in [CONTRACTS.md](CONTRACTS.md).
 msdeposit-tools <subcommand> --help
 ```
 
-| Subcommand | Step |
-| --- | --- |
-| `validate-inputs` | input sheets (C1) → `study.json` per study, normalised run sheet |
-| `raw-fixity` | SHA-256 of vendor files and directory trees (private) |
-| `text-to-mzml`, `mzml-index` | ProteoWizard text dumps and foreign mzML → indexed mzML with checksum |
-| `mzml-metadata` | streaming mzML metadata and run metrics (C2) |
-| `deposit-plan` | deposited names, assay and MAF files, raw packaging (C3) |
-| `mzml-finalise` | rename or anonymise an mzML, header and body, with verification (C4) |
-| `raw-package` | vendor files for upload; deterministic ZIP64 for directory formats |
-| `vendor-metadata`, `identifier-denylist` | identifier candidates from vendor metadata; per-study denylist |
-| `isa`, `lipid-annotate`, `maf`, `mztab`, `mzqc` | ISA-Tab, Goslin/SwissLipids annotation, MAF, mzTab-M 2.0/2.1, mzQC |
-| `assemble` | upload set and manifest (C5); `--extend` adds the report without re-hashing |
-| `check` | MetaboLights, mzTab-M and mzQC validation, completeness (C6–C9) |
+| Subcommand                                          | Step                                                                                                                                        |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `validate-inputs`                                   | input sheets (C1) → `study.json` per study, normalised run sheet                                                                            |
+| `raw-fixity`                                        | SHA-256 of vendor files and directory trees (private)                                                                                       |
+| `text-to-mzml`, `mzml-index`                        | ProteoWizard text dumps and foreign mzML → indexed mzML with checksum                                                                       |
+| `mzml-metadata`                                     | streaming mzML metadata and run metrics (C2)                                                                                                |
+| `deposit-plan`                                      | deposited names, assay and MAF files, raw packaging (C3)                                                                                    |
+| `mzml-finalise`                                     | rename or anonymise an mzML, header and body, with verification (C4)                                                                        |
+| `raw-package`                                       | vendor files for upload; deterministic ZIP64 for directory formats                                                                          |
+| `vendor-metadata`, `identifier-denylist`            | identifier candidates from vendor metadata; per-study denylist                                                                              |
+| `isa`, `lipid-annotate`, `maf`, `mztab`, `mzqc`     | ISA-Tab, Goslin/SwissLipids annotation, MAF, mzTab-M 2.0/2.1, mzQC                                                                          |
+| `assemble`                                          | upload set and manifest (C5); `--extend` adds the report without re-hashing                                                                 |
+| `check`                                             | MetaboLights, mzTab-M and mzQC validation, completeness (C6–C9)                                                                             |
 | `identifier-scan`, `check-sensitive`, `canary-scan` | scanner self-test and scan (S1, S2), residual fields, raw absence, mapping isolation, key safety (S3–S5, S7), content scan of any directory |
-| `gate`, `deposit-report` | gate decision per study; public (allow-list) and private reports |
+| `gate`, `deposit-report`                            | gate decision per study; public (allow-list) and private reports                                                                            |
 
 ## Development
 

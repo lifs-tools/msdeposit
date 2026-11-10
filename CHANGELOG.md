@@ -21,8 +21,20 @@ Initial release of lifs-tools/msdeposit, created with the [nf-core](https://nf-c
 - Object-store support (S3 and compatible) for inputs and both output roots (`--private_launch_dir`).
 - `msdeposit-tools` Python package and container with the domain logic and pinned offline validators.
 - Test profiles `test` and `test_sensitive` with synthetic data; nf-tests.
+- Test profile `test_mtbls` with real runs of MetaboLights studies MTBLS1381 (SCIEX) and MTBLS1382 (Thermo), fetched and
+  verified by `tests/data/mtbls/fetch.sh`; its nf-test scans the public output for identifiers known to be in the
+  original files. CI builds the `msdeposit-tools` image and caches the test data.
+- `docs/submission.md`: step-by-step guide to conversion, pseudonymisation, hit review and post-hoc verification.
 
 ### `Fixed`
+
+- CI: the image build checks the current jmzTab-m `dev-latest` validator (upstream rebuilt it on 2026-11-10); jobs
+  that install Apptainer run on `ubuntu-24.04` (its package needs `libfuse3-3`, missing on 26.04); the template
+  version check can read the private repository; prettier formatting; lint settings for a non-nf-core pipeline.
+- ThermoRawFileParser output is re-indexed by `MZML_INDEX`: its index offsets point at the indentation before each
+  element, so C2 failed it as "index invalid" and blocked every study with Thermo runs.
+- Test profiles fit GitHub runners (2 CPUs, 6 GB); `test_mtbls` marks its Thermo run as `vendor=thermo`.
+- Publishing the private check files works on Nextflow 26.10 (a publish `>>` inside a nested closure failed there).
 
 ### `Dependencies`
 

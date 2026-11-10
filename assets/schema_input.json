@@ -11,145 +11,89 @@
                 "type": "string",
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
                 "errorMessage": "study key: A-Z a-z 0-9 . _ - (max. 64 characters)",
-                "meta": [
-                    "study"
-                ]
+                "meta": ["study"]
             },
             "run": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
                 "errorMessage": "run key: A-Z a-z 0-9 . _ - (max. 64 characters); non-identifying in sensitive mode",
-                "meta": [
-                    "run"
-                ]
+                "meta": ["run"]
             },
             "assay": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
                 "errorMessage": "assay key: A-Z a-z 0-9 . _ - (max. 64 characters)",
-                "meta": [
-                    "assay"
-                ]
+                "meta": ["assay"]
             },
             "sample": {
                 "type": "string",
                 "minLength": 1,
                 "errorMessage": "ISA sample name must be given",
-                "meta": [
-                    "sample"
-                ]
+                "meta": ["sample"]
             },
             "format": {
                 "type": "string",
-                "enum": [
-                    "vendor_raw",
-                    "mzml",
-                    "pwiz_text"
-                ],
+                "enum": ["vendor_raw", "mzml", "pwiz_text"],
                 "errorMessage": "format: vendor_raw, mzml or pwiz_text",
-                "meta": [
-                    "format"
-                ]
+                "meta": ["format"]
             },
             "path": {
                 "type": "string",
                 "minLength": 1,
-                "meta": [
-                    "path"
-                ],
+                "meta": ["path"],
                 "errorMessage": "path: vendor file or directory, mzML or text dump; relative paths are resolved against the run sheet's directory"
             },
             "vendor": {
                 "type": "string",
-                "enum": [
-                    "thermo",
-                    "sciex",
-                    "agilent",
-                    "bruker_tdf",
-                    "bruker_baf",
-                    "waters",
-                    "shimadzu",
-                    "unknown"
-                ],
+                "enum": ["thermo", "sciex", "agilent", "bruker_tdf", "bruker_baf", "waters", "shimadzu", "unknown"],
                 "errorMessage": "vendor: thermo, sciex, agilent, bruker_tdf, bruker_baf, waters, shimadzu",
-                "meta": [
-                    "vendor"
-                ]
+                "meta": ["vendor"]
             },
             "companions": {
                 "type": "string",
                 "errorMessage": "companions: ';'-separated paths of files staged with the run (e.g. .wiff.scan)",
-                "meta": [
-                    "companions"
-                ]
+                "meta": ["companions"]
             },
             "run_index": {
                 "type": "integer",
                 "minimum": 1,
                 "errorMessage": "run_index: 1-based sample index in a multi-sample file",
-                "meta": [
-                    "run_index"
-                ]
+                "meta": ["run_index"]
             },
             "polarity": {
                 "type": "string",
-                "enum": [
-                    "positive",
-                    "negative",
-                    "alternating"
-                ],
+                "enum": ["positive", "negative", "alternating"],
                 "errorMessage": "polarity: positive, negative or alternating",
-                "meta": [
-                    "polarity"
-                ]
+                "meta": ["polarity"]
             },
             "deposited_name": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9._-]+$",
                 "errorMessage": "deposited_name: only A-Z a-z 0-9 . _ -",
-                "meta": [
-                    "deposited_name"
-                ]
+                "meta": ["deposited_name"]
             },
             "raw_id": {
                 "type": "string",
                 "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
                 "errorMessage": "raw_id: A-Z a-z 0-9 . _ -",
-                "meta": [
-                    "raw_id"
-                ]
+                "meta": ["raw_id"]
             }
         },
-        "required": [
-            "study",
-            "run",
-            "assay",
-            "sample",
-            "format",
-            "path"
-        ],
+        "required": ["study", "run", "assay", "sample", "format", "path"],
         "allOf": [
             {
                 "if": {
                     "properties": {
                         "format": {
-                            "enum": [
-                                "mzml",
-                                "pwiz_text"
-                            ]
+                            "enum": ["mzml", "pwiz_text"]
                         }
                     }
                 },
                 "then": {
-                    "required": [
-                        "vendor"
-                    ]
+                    "required": ["vendor"]
                 }
             }
         ]
     },
-    "uniqueEntries": [
-        "study",
-        "run"
-    ]
+    "uniqueEntries": ["study", "run"]
 }

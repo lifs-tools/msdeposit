@@ -1,0 +1,85 @@
+nextflow_pipeline {
+
+    name "Test pipeline: sensitive mode on MetaboLights data (MTBLS1381, MTBLS1382)"
+    script "../main.nf"
+    tag "pipeline"
+    tag "mtbls"
+    profile "test_mtbls,docker"
+
+    // Needs tests/data/mtbls/fetch.sh first (the CI workflow runs it). The post-hoc validation does not trust the
+    // pipeline's own checks: it scans every published file for identifiers taken from the original files
+    // (tests/data/mtbls/expected_identifiers.txt), which are never given to the pipeline.
+    test("-profile test_mtbls: real vendor metadata is removed, nothing identifying is published") {
+
+        when {
+            params {
+                outdir         = "$outputDir"
+                private_outdir = "$outputDir/../private"   // sibling of outdir, never nested
+            }
+        }
+
+        then {
+            def ds      = "$projectDir/tests/data/mtbls"
+            def private_ = "$outputDir/../private"
+            def tokens  = file("$ds/expected_identifiers.txt").readLines()
+                .collect { l -> l.replaceAll(/#.*/, '').trim() }.findAll { t -> t }
+            // files as ISO-8859-1 text, lower case; a token matches as ASCII or as UTF-16LE (Thermo/SCIEX headers)
+            def lower = { f -> new String(f.bytes, 'ISO-8859-1').toLowerCase() }
+            // published mzML without the base64 peak data, where short tokens occur by chance (as in S2)
+            def text_of = { f ->
+                def s = lower(f)
+                if (!f.name.endsWith('.mzML')) { return s }
+                def out = new StringBuilder(); int i = 0
+                while (true) {
+                    int a = s.indexOf('<binary>', i)
+                    if (a < 0) { out.append(s, i, s.length()); break }
+                    int b = s.indexOf('</binary>', a)
+                    out.append(s, i, a); i = b < 0 ? s.length() : b
+                }
+                return out.toString()
+            }
+            def utf16 = { t -> t.toLowerCase().toList().join('\u0000') }
+            def contains = { String text, String t -> text.contains(t.toLowerCase()) || text.contains(utf16(t)) }
+
+            def inputs = ['QTrap007485_031618-Unst1.mzML', 'QTrap007549_031618-1CRP2.mzML', 'QExHF03_HPLC_0000195.raw']
+                .collect { n -> file("$ds/data/$n") }
+            assert inputs.every { f -> f.exists() } : "test data missing: run tests/data/mtbls/fetch.sh"
+            def input_text = inputs.collect { f -> lower(f) }
+            def not_in_inputs = tokens.findAll { t -> !input_text.any { s -> contains(s, t) } }
+
+            def published = getAllFilesFromDir("$outputDir").findAll { f -> !f.isDirectory() }
+            def leaks = published.collectMany { f ->
+                def rel = file("$outputDir").toPath().relativize(f.toPath()).toString()
+                def text = text_of(f)
+                tokens.findAll { t -> rel.toLowerCase().contains(t.toLowerCase()) || contains(text, t) }
+                    .collect { t -> "${rel}: ${t}" }
+            }
+            def gates = ['SRM', 'DIA'].collectEntries { s ->
+                [s, new groovy.json.JsonSlurper().parse(file("${private_}/${s}/gate.json"))]
+            }
+            def mzml = { s -> file("$outputDir/${s}/FILES/DERIVED_FILES").list().toList().sort() }
+            def denylist = { s -> file("${private_}/${s}/denylist.tsv").readLines()*.tokenize('\t')*.getAt(0) }
+
+            assert workflow.success
+            assertAll(
+                // positive control: every token is really in the original files, so a clean scan means something
+                { assert not_in_inputs == [] },
+                // post-hoc leak scan of the public output
+                { assert published.size() > 0 },
+                { assert leaks == [] },
+                // the pipeline's own gate and sensitive checks
+                { assert gates.every { _s, g -> g.status == 'passed' } },
+                { assert gates.every { _s, g -> ['S1', 'S2', 'S3', 'S4', 'S5', 'S7'].every { c -> g.checks[c] == 'pass' } } },
+                // the identifiers were found by the pipeline itself (vendor metadata, mzML metadata, file names)
+                { assert denylist('SRM').containsAll(['QTrap007485_031618-Unst1', 'Qtrap_mediators']) },
+                { assert denylist('DIA').containsAll(['QExHF03', 'QExHF03_HPLC_0000195']) },
+                // neutral names, no raw files, nothing but the upload sets in outdir
+                { assert mzml('SRM') == ['PLT_crp_01_ALT_SRM.mzML', 'PLT_unst_01_ALT_SRM.mzML'] },
+                { assert mzml('DIA') == ['PLT_unst_01_NEG_DIA.mzML'] },
+                { assert !file("$outputDir/SRM/FILES/RAW_FILES").exists() && !file("$outputDir/DIA/FILES/RAW_FILES").exists() },
+                { assert file("$outputDir").list().toList().sort() == ['DIA', 'SRM'] },
+                { assert file("${private_}/pipeline_info").exists() }
+            )
+        }
+    }
+}

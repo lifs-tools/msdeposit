@@ -76,7 +76,7 @@ workflow {
     blocked        = MSDEPOSIT.out.blocked
     gate           = MSDEPOSIT.out.gate
     report_private = MSDEPOSIT.out.report_private
-    checks         = MSDEPOSIT.out.checks
+    checks         = MSDEPOSIT.out.checks.transpose()   // one [study, file] per check: '>>' only works at the top of path {}
     plan           = MSDEPOSIT.out.plan
     mapping        = MSDEPOSIT.out.mapping
     raw_ids        = MSDEPOSIT.out.raw_ids
@@ -101,7 +101,7 @@ output {
     blocked        { path { t -> t[1] >> "blocked/${t[0]}" } }
     gate           { path { t -> t[1] >> "${t[0]}/gate.json" } }
     report_private { path { t -> t[1] >> "${t[0]}/deposit_report.private.html" } }
-    checks         { path { t -> t[1].each { f -> f >> "${t[0]}/checks/${f.name}" } } }
+    checks         { path { t -> t[1] >> "${t[0]}/checks/${t[1].name}" } }
     plan           { path { t -> t[1] >> "${t[0]}/plan.json" } }
     mapping        { path { t -> t[1] >> "${t[0]}/mapping.tsv" } }
     raw_ids        { path { f -> f >> "raw_ids.tsv" } }
